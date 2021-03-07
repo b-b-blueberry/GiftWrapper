@@ -2,11 +2,11 @@
     "Name": "Gift Wrapper",
     "Author": "blueberry",
     "Version": "1.0.0",
-    "Description": "Give the gift of gifts!",
+    "Description": "Give the gift of gifts in multiplayer!",
     "UniqueID": "blueberry.GiftWrapper",
     "EntryDll": "GiftWrapper.dll",
     "MinimumApiVersion": "3.0.0",
-    "UpdateKeys": [ "Nexus:" ],
+    "UpdateKeys": [ "Nexus:4721" ],
     "Dependencies": [
         {
             "UniqueID": "spacechase0.JsonAssets"

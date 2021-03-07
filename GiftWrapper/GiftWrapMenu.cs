@@ -31,8 +31,6 @@ namespace GiftWrapper
 		/// <summary> Whether to have the contextual clickable gift wrap confirm button be visible and interactible </summary>
 		public bool ShowWrapButton { get => ItemToWrap != null; }
 
-		/// <summary> Prevents having the click-down that opens the menu from also interacting with the menu on click-released </summary>
-		private bool _isOpening = true;
 		/// <summary> Current wrapped gift animation timer </summary>
 		private int _animTimer;
 		/// <summary> Current wrapped gift animation frame </summary>
@@ -59,6 +57,7 @@ namespace GiftWrapper
 		public GiftWrapMenu(Vector2 position) : base(inventory: null, context: null)
 		{
 			Game1.playSound("scissors");
+			Game1.freezeControls = true;
 
 			// Custom fields
 			GiftWrapPosition = position;
@@ -131,6 +130,21 @@ namespace GiftWrapper
 			// Clickable navigation
 			_defaultClickable = ItemSlot.myID;
 			this.populateClickableComponentList();
+
+			ModEntry.Instance.Helper.Events.GameLoop.UpdateTicked += this.Event_UnfreezeControls;
+		}
+
+		/// <summary>
+		/// Prevents having the click-down that opens the menu from also interacting with the menu on click-released
+		/// </summary>
+		private void Event_UnfreezeControls(object sender, StardewModdingAPI.Events.UpdateTickedEventArgs e)
+		{
+			ModEntry.Instance.Helper.Events.GameLoop.UpdateTicked -= this.Event_UnfreezeControls;
+			Game1.freezeControls = false;
+			if (Game1.options.SnappyMenus)
+			{
+				this.snapToDefaultClickableComponent();
+			}
 		}
 
 		protected override void cleanupBeforeExit()
@@ -151,8 +165,6 @@ namespace GiftWrapper
 
 		public override void receiveLeftClick(int x, int y, bool playSound = true)
 		{
-			if (_isOpening)
-				return;
 			if (ItemSlot.containsPoint(x, y) && ItemToWrap != null)
 			{
 				if (inventory.tryToAddItem(toPlace: ItemToWrap, sound: playSound ? "coin" : null) == null)
@@ -215,8 +227,6 @@ namespace GiftWrapper
 		
 		public override void receiveRightClick(int x, int y, bool playSound = true)
 		{
-			if (_isOpening)
-				return;
 			if (ItemSlot.containsPoint(x, y) && ItemToWrap != null)
 			{
 				if (inventory.tryToAddItem(toPlace: ItemToWrap.getOne()) == null)
@@ -291,9 +301,6 @@ namespace GiftWrapper
 
 		public override void receiveKeyPress(Keys key)
 		{
-			if (_isOpening)
-				return;
-
 			bool isExitKey = key == Keys.Escape
 				|| Game1.options.doesInputListContain(Game1.options.menuButton, key)
 				|| Game1.options.doesInputListContain(Game1.options.journalButton, key);
@@ -373,9 +380,6 @@ namespace GiftWrapper
 
 		public override void receiveGamePadButton(Buttons b)
 		{
-			if (_isOpening)
-				return;
-
 			// Contextual navigation
 			int current = currentlySnappedComponent != null ? currentlySnappedComponent.myID : -1;
 			int snapTo = -1;
@@ -432,14 +436,6 @@ namespace GiftWrapper
 
 		public override void update(GameTime time)
 		{
-			if (_isOpening)
-			{
-				// Immediately unset opening input-block flag
-				_isOpening = false;
-				// Snap once our default is set
-				this.snapToDefaultClickableComponent();
-			}
-
 			// WrapButton animation loop
 			_animTimer += time.ElapsedGameTime.Milliseconds;
 			if (_animTimer >= AnimTimerLimit)

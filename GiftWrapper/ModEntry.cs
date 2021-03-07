@@ -58,8 +58,25 @@ namespace GiftWrapper
 			Helper.Content.AssetEditors.Add(assetManager);
 		}
 
+		private void RegisterGenericModConfigMenuPage()
+		{
+			IGenericModConfigMenuAPI api = Helper.ModRegistry.GetApi<IGenericModConfigMenuAPI>("spacechase0.GenericModConfigMenu");
+			if (api == null)
+				return;
+
+			api.RegisterModConfig(ModManifest,
+				revertToDefault: () => Config = new Config(),
+				saveToFile: () => Helper.WriteConfig(Config));
+			api.RegisterSimpleOption(ModManifest,
+				optionName: i18n.Get("config.invertmousebuttons.name"),
+				optionDesc: i18n.Get("config.invertmousebuttons.description"),
+				optionGet: () => Config.InteractUsingToolButton,
+				optionSet: (bool value) => Config.InteractUsingToolButton = value);
+		}
+		
 		private void LoadApis()
 		{
+			// Add Json Assets items
 			JsonAssets = Helper.ModRegistry.GetApi<IJsonAssetsAPI>("spacechase0.JsonAssets");
 			if (JsonAssets == null)
 			{
@@ -67,6 +84,9 @@ namespace GiftWrapper
 				return;
 			}
 			JsonAssets.LoadAssets(Path.Combine(Helper.DirectoryPath, ContentPackPath));
+
+			// Add GMCM config page
+			this.RegisterGenericModConfigMenuPage();
 		}
 
 		private void GameLoop_GameLaunched(object sender, GameLaunchedEventArgs e)
@@ -194,7 +214,7 @@ namespace GiftWrapper
 			{
 				// Place held gift wrap and wrapped gifts on the ground when left-clicking
 				bool canPlaceHere = Game1.currentLocation.isTileLocationTotallyClearAndPlaceableIgnoreFloors(e.Cursor.GrabTile)
-					|| Game1.currentLocation.Objects.ContainsKey(e.Cursor.GrabTile);
+					&& !Game1.currentLocation.Objects.ContainsKey(e.Cursor.GrabTile);
 				if (this.IsPlacementButton(e.Button) && canPlaceHere)
 				{
 					const string placementSound = "throwDownITem"; // not a typo
