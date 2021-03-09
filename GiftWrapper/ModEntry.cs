@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using xTile.Dimensions;
 
 namespace GiftWrapper
 {
@@ -58,22 +59,6 @@ namespace GiftWrapper
 			Helper.Content.AssetEditors.Add(assetManager);
 		}
 
-		private void RegisterGenericModConfigMenuPage()
-		{
-			IGenericModConfigMenuAPI api = Helper.ModRegistry.GetApi<IGenericModConfigMenuAPI>("spacechase0.GenericModConfigMenu");
-			if (api == null)
-				return;
-
-			api.RegisterModConfig(ModManifest,
-				revertToDefault: () => Config = new Config(),
-				saveToFile: () => Helper.WriteConfig(Config));
-			api.RegisterSimpleOption(ModManifest,
-				optionName: i18n.Get("config.invertmousebuttons.name"),
-				optionDesc: i18n.Get("config.invertmousebuttons.description"),
-				optionGet: () => Config.InteractUsingToolButton,
-				optionSet: (bool value) => Config.InteractUsingToolButton = value);
-		}
-		
 		private void LoadApis()
 		{
 			// Add Json Assets items
@@ -89,6 +74,27 @@ namespace GiftWrapper
 			this.RegisterGenericModConfigMenuPage();
 		}
 
+		private void RegisterGenericModConfigMenuPage()
+		{
+			IGenericModConfigMenuAPI api = Helper.ModRegistry.GetApi<IGenericModConfigMenuAPI>("spacechase0.GenericModConfigMenu");
+			if (api == null)
+				return;
+
+			api.RegisterModConfig(ModManifest,
+				revertToDefault: () => Config = new Config(),
+				saveToFile: () => Helper.WriteConfig(Config));
+			api.RegisterSimpleOption(ModManifest,
+				optionName: i18n.Get("config.availableallyear.name"),
+				optionDesc: i18n.Get("config.availableallyear.description"),
+				optionGet: () => Config.AvailableAllYear,
+				optionSet: (bool value) => Config.AvailableAllYear = value);
+			api.RegisterSimpleOption(ModManifest,
+				optionName: i18n.Get("config.invertmousebuttons.name"),
+				optionDesc: i18n.Get("config.invertmousebuttons.description"),
+				optionGet: () => Config.InteractUsingToolButton,
+				optionSet: (bool value) => Config.InteractUsingToolButton = value);
+		}
+
 		private void GameLoop_GameLaunched(object sender, GameLaunchedEventArgs e)
 		{
 			this.LoadApis();
@@ -96,8 +102,9 @@ namespace GiftWrapper
 
 		private void Display_MenuChanged(object sender, MenuChangedEventArgs e)
 		{
-			if (e.NewMenu != null && e.NewMenu is StardewValley.Menus.ShopMenu shop && shop.portraitPerson != null && shop.portraitPerson.Name == "Pierre"
-				&& Game1.currentSeason == "winter" && Game1.dayOfMonth >= 18)
+			bool isWinterStarPeriod = Game1.currentSeason == "winter" && Game1.dayOfMonth >= 18;
+			if (e.NewMenu != null && e.NewMenu is ShopMenu shop && shop.portraitPerson != null && shop.portraitPerson.Name == "Pierre"
+				&& (Config.AvailableAllYear || isWinterStarPeriod))
 			{
 				// Gift wrap is purchaseable from Pierre throughout the Secret Friend gifting event
 				int id = JsonAssets.GetObjectId(AssetPrefix + GiftWrapName);
@@ -110,7 +117,25 @@ namespace GiftWrapper
 					price *= 0.4f;
 				}
 				shop.itemPriceAndStock.Add(o, new int[] { (int)(price * 0.2) * 5, int.MaxValue });
-				shop.forSale.Insert(0, o);
+				if (isWinterStarPeriod)
+				{
+					// Gift wrap appears at the top of the shop stock over the Winter Star festival
+					shop.forSale.Insert(0, o);
+				}
+				else
+				{
+					// If using the available-all-year config option, place gift wrap further down the list at other times of year
+					ISalable item = shop.forSale.FirstOrDefault(i => i.Name == "Bouquet") ?? shop.forSale.Last(i => i.Name.EndsWith("Sapling"));
+					if (item != null)
+					{
+						int index = shop.forSale.IndexOf(item) + 1;
+						shop.forSale.Insert(index, o);
+					}
+					else
+					{
+						shop.forSale.Add(o);
+					}
+				}
 			}
 		}
 
@@ -136,7 +161,12 @@ namespace GiftWrapper
 				}
 			}
 
-			if (Game1.activeClickableMenu != null)
+
+			Vector2 screenPos = new Vector2(e.Cursor.ScreenPixels.X, e.Cursor.ScreenPixels.Y);
+			Location tilePos = new Location((int)e.Cursor.ScreenPixels.X, (int)e.Cursor.ScreenPixels.Y);
+			if (Game1.activeClickableMenu != null // No active menus or onscreen menus
+				|| Game1.onScreenMenus.Any(menu => menu.isWithinBounds((int)screenPos.X, (int)screenPos.Y))
+				|| Game1.currentLocation.checkAction(tilePos, Game1.viewport, Game1.player))
 			{
 				return;
 			}
@@ -220,6 +250,7 @@ namespace GiftWrapper
 					const string placementSound = "throwDownITem"; // not a typo
 					if (Game1.player.ActiveObject != null && Game1.player.ActiveObject.Name == AssetPrefix + GiftWrapName)
 					{
+						Helper.Input.Suppress(e.Button);
 						Game1.playSound(placementSound); 
 						Game1.currentLocation.Objects[e.Cursor.GrabTile] = Game1.player.ActiveObject.getOne() as StardewValley.Object;
 						--Game1.player.ActiveObject.Stack;
@@ -296,24 +327,6 @@ namespace GiftWrapper
 
 		public Item GetWrappedGift(ModDataDictionary modData)
 		{
-			/*	// Tool-based solution for wrapped gifts:
-			string name = AssetPrefix + WrappedGiftName;
-			string displayName = i18n.Get("item." + WrappedGiftName + ".name");
-			string description = i18n.Get("item." + WrappedGiftName + ".description");
-			Item wrappedGift = new GenericTool(
-				name: LocalizedContentManager.CurrentLanguageCode.ToString() == "en" ? displayName : name,
-				description: description,
-				upgradeLevel: 0,
-				parentSheetIndex: WrappedGiftToolsSheetIndex,
-				menuViewIndex: WrappedGiftToolsSheetIndex)
-			{
-				ParentSheetIndex = WrappedGiftToolsSheetIndex,
-				CurrentParentTileIndex = WrappedGiftToolsSheetIndex,
-				DisplayName = displayName,
-				Stackable = false
-			};
-			*/
-
 			// Object-based solution for wrapped gifts:
 			Item wrappedGift = new StardewValley.Object(parentSheetIndex: JsonAssets.GetObjectId(AssetPrefix + WrappedGiftName), initialStack: 1)
 			{

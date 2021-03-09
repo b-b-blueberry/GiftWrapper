@@ -53,6 +53,7 @@ namespace GiftWrapper
 		private new const int borderWidth = 4;
 		private readonly int _borderScaled;
 		private readonly int _defaultClickable = -1;
+		private readonly int _inventoryExtraWidth = 4 * Game1.pixelZoom;
 
 		public GiftWrapMenu(Vector2 position) : base(inventory: null, context: null)
 		{
@@ -78,6 +79,10 @@ namespace GiftWrapper
 			_borderScaled = borderWidth * Game1.pixelZoom;
 			int yOffset;
 			int ID = 1000;
+
+			// Widen inventory to allow more space in the text area above
+			inventory.width += _inventoryExtraWidth;
+			inventory.xPositionOnScreen -= _inventoryExtraWidth / 2;
 
 			// Background panel
 			yOffset = -32 * Game1.pixelZoom;
@@ -232,8 +237,7 @@ namespace GiftWrapper
 				if (inventory.tryToAddItem(toPlace: ItemToWrap.getOne()) == null)
 				{
 					// Take one from wrapping
-					--ItemToWrap.Stack;
-					if (ItemToWrap.Stack < 1)
+					if (ItemToWrap.maximumStackSize() <= 1 || --ItemToWrap.Stack < 1)
 						ItemToWrap = null;
 				}
 				else
@@ -270,8 +274,7 @@ namespace GiftWrapper
 				if (movedOne)
 				{
 					// Take one from inventory
-					--inventory.actualInventory[index].Stack;
-					if (inventory.actualInventory[index].Stack < 1)
+					if (inventory.actualInventory[index].maximumStackSize() <= 1 || --inventory.actualInventory[index].Stack < 1)
 						inventory.actualInventory[index] = null;
 					Game1.playSound("coin");
 				}
@@ -474,7 +477,15 @@ namespace GiftWrapper
 
 			Vector2 margin = new Vector2(2, 4) * Game1.pixelZoom;
 			string text = i18n.Get("menu.infopanel.body");
-			text = Game1.parseText(text, Game1.smallFont, width: textPanelArea.Width - (int)(margin.X * 1.5f));
+			// Give a little extra leeway with non-English locales to fit them into the text area
+			text = Game1.parseText(text, Game1.smallFont, width: textPanelArea.Width
+				- (LocalizedContentManager.CurrentLanguageCode.ToString() == "en" ? (int)margin.X : 0));
+			if (Game1.smallFont.MeasureString(text).Y > textPanelArea.Height)
+			{
+				// Remove the last line if text overflows
+				IEnumerable<string> split = text.Split('.').Where(str => !string.IsNullOrWhiteSpace(str));
+				text = split.Aggregate("", (total, str) => str != split.Last() ? total + str + "." : total);
+			}
 			Utility.drawTextWithShadow(b, text, Game1.smallFont, position: new Vector2(textPanelArea.X + (int)margin.X, textPanelArea.Y + (int)margin.Y), Game1.textColor);
 
 			// Item clickables:
@@ -520,8 +531,7 @@ namespace GiftWrapper
 			Dictionary<int, double> iconShakeTimer = _iconShakeTimerField.GetValue();
 			for (int key = 0; key < inventory.inventory.Count; ++key)
 			{
-				if (iconShakeTimer.ContainsKey(key)
-					&& Game1.currentGameTime.TotalGameTime.TotalSeconds >= iconShakeTimer[key])
+				if (iconShakeTimer.ContainsKey(key) && Game1.currentGameTime.TotalGameTime.TotalSeconds >= iconShakeTimer[key])
 					iconShakeTimer.Remove(key);
 			}
 
@@ -530,13 +540,14 @@ namespace GiftWrapper
 			{
 				Vector2 position = new Vector2(
 					inventory.xPositionOnScreen
-					 + (i % (inventory.capacity / inventory.rows) * 64)
-					 + (inventory.horizontalGap * (i % (inventory.capacity / inventory.rows))),
+						+ (_inventoryExtraWidth / 2)
+						+ (i % (inventory.capacity / inventory.rows) * 64)
+						+ (inventory.horizontalGap * (i % (inventory.capacity / inventory.rows))),
 					inventory.yPositionOnScreen
 						+ (i / (inventory.capacity / inventory.rows) * (64 + inventory.verticalGap))
 						+ (((i / (inventory.capacity / inventory.rows)) - 1) * 4)
 						- (i >= inventory.capacity / inventory.rows
-						   || !inventory.playerInventory || inventory.verticalGap != 0 ? 0 : 12));
+							|| !inventory.playerInventory || inventory.verticalGap != 0 ? 0 : 12));
 
 				// Item slot frames
 				b.Draw(
