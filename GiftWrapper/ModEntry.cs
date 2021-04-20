@@ -27,7 +27,7 @@ namespace GiftWrapper
 		public const string GiftWrapName = "giftwrap";
 		public const string WrappedGiftName = "wrappedgift";
 
-		internal static readonly string GameContentTexturePath = @$"{AssetPrefix}Assets/Sprites";
+		internal static readonly string GameContentTexturePath = Path.Combine(AssetPrefix + "Assets", "Sprites");
 		internal static readonly string LocalTexturePath = Path.Combine("assets", "sprites");
 		internal static readonly string ContentPackPath = Path.Combine("assets", "ContentPack");
 		internal const int GiftWrapFriendshipBoost = 25;
