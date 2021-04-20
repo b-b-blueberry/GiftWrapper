@@ -62,15 +62,17 @@ namespace GiftWrapper
 
 				// Add global chat message for gifts opened
 				// Format message tokens so that they can be later tokenised by the game in multiplayer.globalChatInfoMessage()
-				const string i18nKey = "message.giftopened";
-				data.Add("Chat_" + ModEntry.AssetPrefix + i18nKey,
-					i18n.Get(i18nKey, new
-					{
-						Recipient = "{0}",
-						Sender = "{1}",
-						OneOrMany = "{2}",
-						ItemName = "{3}"
-					}));
+				foreach (string i18nKey in new [] { "message.giftopened", "message.giftopened.quantity" })
+				{
+					data.Add("Chat_" + ModEntry.AssetPrefix + i18nKey,
+						i18n.Get(i18nKey, new
+						{
+							Recipient = "{0}",
+							Sender = "{1}",
+							ItemName = "{2}",
+							ItemQuantity = "{3}"
+						}));
+				}
 
 				asset.AsDictionary<string, string>().ReplaceWith(data);
 				return;
