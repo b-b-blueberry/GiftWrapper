@@ -50,14 +50,11 @@ namespace GiftWrapper
 			Instance = this;
 			Config = Helper.ReadConfig<Config>();
 
+			Helper.Events.Content.AssetRequested += AssetManager.AssetRequested;
 			Helper.Events.GameLoop.GameLaunched += this.GameLoop_GameLaunched;
 			Helper.Events.Input.ButtonPressed += this.Input_ButtonPressed;
 			Helper.Events.Display.MenuChanged += this.Display_MenuChanged;
 			SpaceEvents.BeforeGiftGiven += this.SpaceEvents_BeforeGiftGiven;
-
-			AssetManager assetManager = new AssetManager();
-			Helper.Content.AssetLoaders.Add(assetManager);
-			Helper.Content.AssetEditors.Add(assetManager);
 		}
 
 		private void LoadApis()
