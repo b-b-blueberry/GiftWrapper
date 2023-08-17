@@ -81,19 +81,22 @@ namespace GiftWrapper
 			if (api == null)
 				return;
 
-			api.RegisterModConfig(ModManifest,
-				revertToDefault: () => Config = new Config(),
-				saveToFile: () => Helper.WriteConfig(Config));
-			api.RegisterSimpleOption(ModManifest,
-				optionName: i18n.Get("config.availableallyear.name"),
-				optionDesc: i18n.Get("config.availableallyear.description"),
-				optionGet: () => Config.AvailableAllYear,
-				optionSet: (bool value) => Config.AvailableAllYear = value);
-			api.RegisterSimpleOption(ModManifest,
-				optionName: i18n.Get("config.invertmousebuttons.name"),
-				optionDesc: i18n.Get("config.invertmousebuttons.description"),
-				optionGet: () => Config.InteractUsingToolButton,
-				optionSet: (bool value) => Config.InteractUsingToolButton = value);
+			api.Register(
+				mod: ModManifest,
+				reset: () => Config = new Config(),
+				save: () => Helper.WriteConfig(Config));
+			api.AddBoolOption(
+				mod: ModManifest,
+				name: () => i18n.Get("config.availableallyear.name"),
+				tooltip: () => i18n.Get("config.availableallyear.description"),
+				getValue: () => Config.AvailableAllYear,
+				setValue: (bool value) => Config.AvailableAllYear = value);
+			api.AddBoolOption(
+				mod: ModManifest,
+				name: () => i18n.Get("config.invertmousebuttons.name"),
+				tooltip: () => i18n.Get("config.invertmousebuttons.description"),
+				getValue: () => Config.InteractUsingToolButton,
+				setValue: (bool value) => Config.InteractUsingToolButton = value);
 		}
 
 		private void GameLoop_GameLaunched(object sender, GameLaunchedEventArgs e)
