@@ -529,7 +529,7 @@ namespace GiftWrapper
 					break;
 				case (int)GiftType.Clothing:
 					int[] colourSplit = giftColour.Split('/').ToList().ConvertAll(int.Parse).ToArray();
-					Color colour = new Color(r: colourSplit[0], g: colourSplit[1], b: colourSplit[2], a: colourSplit[3]);
+					Color colour = new Color(r: colourSplit[0], g: colourSplit[1], b: colourSplit[2], alpha: colourSplit[3]);
 					actualGift = new Clothing(item_index: giftId);
 					((Clothing)actualGift).clothesColor.Set(colour);
 					break;
