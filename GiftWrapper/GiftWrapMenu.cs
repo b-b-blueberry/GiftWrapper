@@ -38,13 +38,13 @@ namespace GiftWrapper
 		/// <summary> Number of frames in wrapped gift button animation </summary>
 		private const int AnimFrames = 4;
 		/// <summary> Value at which animTimer will reset to 0 </summary>
-		private const int AnimTimerLimit = AnimFrameTime * AnimFrames;
+		private const int AnimTimerLimit = GiftWrapMenu.AnimFrameTime * GiftWrapMenu.AnimFrames;
 		/// <summary> Reflects InventoryMenu item shake </summary>
 		private readonly IReflectedField<Dictionary<int, double>> _iconShakeTimerField;
 
 		private static readonly Rectangle BackgroundSource = new(0, 0, 128, 80);
-		private static readonly Rectangle DecorationSource = new(0, BackgroundSource.Height, 96, 64);
-		private static readonly Rectangle ItemSlotSource = new(BackgroundSource.X + BackgroundSource.Width - 18, BackgroundSource.Y + BackgroundSource.Height, 18, 18);
+		private static readonly Rectangle DecorationSource = new(0, GiftWrapMenu.BackgroundSource.Height, 96, 64);
+		private static readonly Rectangle ItemSlotSource = new(GiftWrapMenu.BackgroundSource.X + GiftWrapMenu.BackgroundSource.Width - 18, GiftWrapMenu.BackgroundSource.Y + GiftWrapMenu.BackgroundSource.Height, 18, 18);
 		private static readonly Rectangle WrapButtonSource = new(548, 262, 18, 20);
 		private Rectangle _backgroundArea;
 		private Rectangle _decorationArea;
@@ -74,7 +74,7 @@ namespace GiftWrapper
 				centre.X = centre.X / 3 * 2;
 			}
 
-			this._borderScaled = borderWidth * Game1.pixelZoom;
+			this._borderScaled = GiftWrapMenu.borderWidth * Game1.pixelZoom;
 			int yOffset;
 			int ID = 1000;
 
@@ -85,31 +85,32 @@ namespace GiftWrapper
 			// Background panel
 			yOffset = -32 * Game1.pixelZoom;
 			this._backgroundArea = new Rectangle(
-				this.inventory.xPositionOnScreen - (this._borderScaled / 2),
-				centre.Y + yOffset - (BackgroundSource.Height / 2 * Game1.pixelZoom),
-				BackgroundSource.Width * Game1.pixelZoom,
-				BackgroundSource.Height * Game1.pixelZoom);
+				x: this.inventory.xPositionOnScreen - (this._borderScaled / 2),
+				y: centre.Y + yOffset - (GiftWrapMenu.BackgroundSource.Height / 2 * Game1.pixelZoom),
+				width: GiftWrapMenu.BackgroundSource.Width * Game1.pixelZoom,
+				height: GiftWrapMenu.BackgroundSource.Height * Game1.pixelZoom);
 
 			yOffset = -28 * Game1.pixelZoom;
 			this._decorationArea = new Rectangle(
-				this._backgroundArea.X + ((BackgroundSource.Width - DecorationSource.Width) / 2 * Game1.pixelZoom),
-				centre.Y + yOffset - (DecorationSource.Height / 2 * Game1.pixelZoom),
-				DecorationSource.Width * Game1.pixelZoom,
-				DecorationSource.Height * Game1.pixelZoom);
+				x: this._backgroundArea.X + ((GiftWrapMenu.BackgroundSource.Width - GiftWrapMenu.DecorationSource.Width) / 2 * Game1.pixelZoom),
+				y: centre.Y + yOffset - (GiftWrapMenu.DecorationSource.Height / 2 * Game1.pixelZoom),
+				width: GiftWrapMenu.DecorationSource.Width * Game1.pixelZoom,
+				height: GiftWrapMenu.DecorationSource.Height * Game1.pixelZoom);
 
-			this.inventory.yPositionOnScreen = this._backgroundArea.Y + this._backgroundArea.Height + (borderWidth * 2 * Game1.pixelZoom);
+			this.inventory.yPositionOnScreen = this._backgroundArea.Y + this._backgroundArea.Height + (GiftWrapMenu.borderWidth * 2 * Game1.pixelZoom);
 
 			// Item slot clickable
 			yOffset = -24 * Game1.pixelZoom;
 			this.ItemSlot = new ClickableTextureComponent(
 				bounds: new Rectangle(
-					this._backgroundArea.X + ((BackgroundSource.Width - ItemSlotSource.Width) / 2 * Game1.pixelZoom),
-					this._backgroundArea.Y + (this._backgroundArea.Height / 2) + yOffset,
-					ItemSlotSource.Width * Game1.pixelZoom,
-					ItemSlotSource.Height * Game1.pixelZoom),
-				texture: this.Texture,
-				sourceRect: ItemSlotSource,
-				scale: Game1.pixelZoom, drawShadow: false)
+					x: this._backgroundArea.X + ((GiftWrapMenu.BackgroundSource.Width - GiftWrapMenu.ItemSlotSource.Width) / 2 * Game1.pixelZoom),
+					y: this._backgroundArea.Y + (this._backgroundArea.Height / 2) + yOffset,
+					width: GiftWrapMenu.ItemSlotSource.Width * Game1.pixelZoom,
+					height: GiftWrapMenu.ItemSlotSource.Height * Game1.pixelZoom),
+				texture: ModEntry.Texture,
+				sourceRect: GiftWrapMenu.ItemSlotSource,
+				scale: Game1.pixelZoom,
+				drawShadow: false)
 			{
 				myID = ++ID
 			};
@@ -119,13 +120,14 @@ namespace GiftWrapper
 			Texture2D junimoTexture = Game1.content.Load<Texture2D>(@"LooseSprites/JunimoNote");
 			this.WrapButton = new ClickableTextureComponent(
 				bounds: new Rectangle(
-					this.ItemSlot.bounds.X,
-					this._backgroundArea.Y + (this._backgroundArea.Height / 2) + yOffset,
-					WrapButtonSource.Width * Game1.pixelZoom,
-					WrapButtonSource.Height * Game1.pixelZoom),
+					x: this.ItemSlot.bounds.X,
+					y: this._backgroundArea.Y + (this._backgroundArea.Height / 2) + yOffset,
+					width: GiftWrapMenu.WrapButtonSource.Width * Game1.pixelZoom,
+					height: GiftWrapMenu.WrapButtonSource.Height * Game1.pixelZoom),
 				texture: junimoTexture,
-				sourceRect: WrapButtonSource,
-				scale: Game1.pixelZoom, drawShadow: false)
+				sourceRect: GiftWrapMenu.WrapButtonSource,
+				scale: Game1.pixelZoom,
+				drawShadow: false)
 			{
 				myID = ++ID
 			};
@@ -134,15 +136,14 @@ namespace GiftWrapper
 			this._defaultClickable = this.ItemSlot.myID;
 			this.populateClickableComponentList();
 
-			ModEntry.Instance.Helper.Events.GameLoop.UpdateTicked += this.Event_UnfreezeControls;
+			ModEntry.Instance.Helper.Events.GameLoop.UpdateTicked += this.OnGiftWrapMenuInitialised;
 		}
 
-		/// <summary>
-		/// Prevents having the click-down that opens the menu from also interacting with the menu on click-released
-		/// </summary>
-		private void Event_UnfreezeControls(object sender, StardewModdingAPI.Events.UpdateTickedEventArgs e)
+		private void OnGiftWrapMenuInitialised(object sender, StardewModdingAPI.Events.UpdateTickedEventArgs e)
 		{
-			ModEntry.Instance.Helper.Events.GameLoop.UpdateTicked -= this.Event_UnfreezeControls;
+			ModEntry.Instance.Helper.Events.GameLoop.UpdateTicked -= this.OnGiftWrapMenuInitialised;
+
+			// Prevents having the click-down that opens the menu from also interacting with the menu on click-released
 			Game1.freezeControls = false;
 			if (Game1.options.SnappyMenus)
 			{
@@ -437,9 +438,9 @@ namespace GiftWrapper
 		{
 			// WrapButton animation loop
 			this._animTimer += time.ElapsedGameTime.Milliseconds;
-			if (this._animTimer >= AnimTimerLimit)
+			if (this._animTimer >= GiftWrapMenu.AnimTimerLimit)
 				this._animTimer = 0;
-			this._animFrame = (int)((float)this._animTimer / AnimTimerLimit * AnimFrames);
+			this._animFrame = (int)((float)this._animTimer / GiftWrapMenu.AnimTimerLimit * GiftWrapMenu.AnimFrames);
 
 			base.update(time);
 		}
@@ -454,13 +455,13 @@ namespace GiftWrapper
 				color: Color.Black * 0.3f);
 
 			// Inventory panel
-			this.DrawInventory(b);
+			this.DrawGiftWrapInventory(b);
 
 			// Background panel
 			b.Draw(
 				texture: this.Texture,
 				destinationRectangle: this._backgroundArea,
-				sourceRectangle: BackgroundSource,
+				sourceRectangle: GiftWrapMenu.BackgroundSource,
 				color: Color.White,
 				rotation: 0,
 				origin: Vector2.Zero,
@@ -469,13 +470,13 @@ namespace GiftWrapper
 			b.Draw(
 				texture: this.Texture,
 				destinationRectangle: this._decorationArea,
-				sourceRectangle: DecorationSource,
+				sourceRectangle: GiftWrapMenu.DecorationSource,
 				color: Color.White,
 				rotation: 0,
 				origin: Vector2.Zero,
 				effects: SpriteEffects.None,
 				layerDepth: 1);
-			this.DrawPinkBorder(
+			this.DrawGiftWrapBorder(
 				b: b,
 				area: this._backgroundArea,
 				drawBorderOutside: true,
@@ -487,7 +488,7 @@ namespace GiftWrapper
 				y: this._backgroundArea.Y,
 				width: this.inventory.width - this._backgroundArea.Width + (1 * Game1.pixelZoom),
 				height: this._backgroundArea.Height);
-			this.DrawPinkBorder(
+			this.DrawGiftWrapBorder(
 				b: b,
 				area: textPanelArea,
 				drawBorderOutside: true,
@@ -561,7 +562,7 @@ namespace GiftWrapper
 		/// Mostly a copy of InventoryMenu.draw(SpriteBatch b, int red, int blue, int green),
 		/// though items considered unable to be cooked will be greyed out.
 		/// </summary>
-		private void DrawInventory(SpriteBatch b)
+		private void DrawGiftWrapInventory(SpriteBatch b)
 		{
 			// Background card
 			Vector4 margin = new Vector4(2, 4, 5, 4) * Game1.pixelZoom;
@@ -570,7 +571,7 @@ namespace GiftWrapper
 				y: this.inventory.yPositionOnScreen - (int)margin.Y,
 				width: this.inventory.width + (int)margin.Z,
 				height: this.inventory.height + (int)margin.W);
-			this.DrawPinkBorder(
+			this.DrawGiftWrapBorder(
 				b: b,
 				area: area,
 				drawBorderOutside: true,
@@ -681,7 +682,7 @@ namespace GiftWrapper
 			}
 		}
 
-		private void DrawPinkBorder(SpriteBatch b, Rectangle area, bool drawBorderOutside, bool drawFillColour)
+		private void DrawGiftWrapBorder(SpriteBatch b, Rectangle area, bool drawBorderOutside, bool drawFillColour)
 		{
 			Point point = new(x: 100, y: 80);
 			Point cornerSize = new(x: 5, y: 5);
@@ -747,22 +748,22 @@ namespace GiftWrapper
 				}
 
 				// Top
-				source = new Rectangle(point.X + borderWidth + 1, point.Y, 1, borderWidth + 1);
+				source = new Rectangle(point.X + GiftWrapMenu.borderWidth + 1, point.Y, 1, GiftWrapMenu.borderWidth + 1);
 				scaled = new Rectangle(0, 0, source.Width * Game1.pixelZoom, source.Height * Game1.pixelZoom);
 				target = new Rectangle(area.X + (cornerSize.Y * Game1.pixelZoom), area.Y, area.Width - (cornerSize.X * Game1.pixelZoom * 2), scaled.Height);
 				draw(target: target, source: source);
 				// Bottom
-				source = new Rectangle(point.X + borderWidth + 1, point.Y, 1, borderWidth);
+				source = new Rectangle(point.X + GiftWrapMenu.borderWidth + 1, point.Y, 1, GiftWrapMenu.borderWidth);
 				scaled = new Rectangle(0, 0, source.Width * Game1.pixelZoom, source.Height * Game1.pixelZoom);
 				target = new Rectangle(area.X + (cornerSize.Y * Game1.pixelZoom), area.Y + area.Height - scaled.Height, area.Width - (cornerSize.X * Game1.pixelZoom * 2), scaled.Height);
 				draw(target: target, source: source);
 				// Left
-				source = new Rectangle(point.X, point.Y + borderWidth, borderWidth, 1);
+				source = new Rectangle(point.X, point.Y + GiftWrapMenu.borderWidth, GiftWrapMenu.borderWidth, 1);
 				scaled = new Rectangle(0, 0, source.Width * Game1.pixelZoom, source.Height * Game1.pixelZoom);
 				target = new Rectangle(area.X, area.Y + (cornerSize.Y * Game1.pixelZoom), scaled.Width, area.Height - (cornerSize.Y * Game1.pixelZoom * 2));
 				draw(target: target, source: source);
 				// Right
-				source = new Rectangle(point.X + source.Width + 1, point.Y + borderWidth, borderWidth + 1, 1);
+				source = new Rectangle(point.X + source.Width + 1, point.Y + GiftWrapMenu.borderWidth, GiftWrapMenu.borderWidth + 1, 1);
 				scaled = new Rectangle(0, 0, source.Width * Game1.pixelZoom, source.Height * Game1.pixelZoom);
 				target = new Rectangle(area.X + area.Width - scaled.Width, area.Y + (cornerSize.Y * Game1.pixelZoom), scaled.Width, area.Height - (cornerSize.Y * Game1.pixelZoom * 2));
 				draw(target: target, source: source);
