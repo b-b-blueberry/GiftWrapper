@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SpaceCore.Events;
@@ -24,6 +25,8 @@ namespace GiftWrapper
 		internal static Config Config;
 		internal static ITranslationHelper I18n => ModEntry.Instance.Helper.Translation;
 		internal static IJsonAssetsAPI JsonAssets;
+
+		internal static Lazy<Texture2D> Sprites = new(() => ModEntry.Instance.Helper.GameContent.Load<Texture2D>(ModEntry.GameContentTexturePath));
 
 		public const string AssetPrefix = "blueberry.gw.";
 		public const string GiftWrapName = "giftwrap";

@@ -13,8 +13,6 @@ namespace GiftWrapper
 {
 	public class GiftWrapMenu : ItemGrabMenu
 	{
-		/// <summary> Custom sprite assets for menu elements </summary>
-		public Texture2D Texture;
 		/// <summary> Clickable container to display items placed by the user for turning into wrapped gifts </summary>
 		public ClickableTextureComponent ItemSlot;
 		/// <summary> Contextual clickable button to confirm the gift wrap action, revealed when there are items to be wrapped </summary>
@@ -60,7 +58,6 @@ namespace GiftWrapper
 
 			// Custom fields
 			this.GiftWrapPosition = position;
-			this.Texture = Game1.content.Load<Texture2D>(ModEntry.GameContentTexturePath);
 
 			// Base fields
 			this.initializeUpperRightCloseButton();
@@ -107,7 +104,7 @@ namespace GiftWrapper
 					y: this._backgroundArea.Y + (this._backgroundArea.Height / 2) + yOffset,
 					width: GiftWrapMenu.ItemSlotSource.Width * Game1.pixelZoom,
 					height: GiftWrapMenu.ItemSlotSource.Height * Game1.pixelZoom),
-				texture: ModEntry.Texture,
+				texture: ModEntry.Sprites.Value,
 				sourceRect: GiftWrapMenu.ItemSlotSource,
 				scale: Game1.pixelZoom,
 				drawShadow: false)
@@ -459,7 +456,7 @@ namespace GiftWrapper
 
 			// Background panel
 			b.Draw(
-				texture: this.Texture,
+				texture: ModEntry.Sprites.Value,
 				destinationRectangle: this._backgroundArea,
 				sourceRectangle: GiftWrapMenu.BackgroundSource,
 				color: Color.White,
@@ -468,7 +465,7 @@ namespace GiftWrapper
 				effects: SpriteEffects.None,
 				layerDepth: 1);
 			b.Draw(
-				texture: this.Texture,
+				texture: ModEntry.Sprites.Value,
 				destinationRectangle: this._decorationArea,
 				sourceRectangle: GiftWrapMenu.DecorationSource,
 				color: Color.White,
@@ -737,7 +734,7 @@ namespace GiftWrapper
 				void draw(Rectangle target, Rectangle source)
 				{
 					b.Draw(
-						texture: this.Texture,
+						texture: ModEntry.Sprites.Value,
 						destinationRectangle: target,
 						sourceRectangle: source,
 						color: colour,
@@ -776,7 +773,7 @@ namespace GiftWrapper
 				void draw(Vector2 target, Rectangle source)
 				{
 					b.Draw(
-						texture: this.Texture,
+						texture: ModEntry.Sprites.Value,
 						position: target,
 						sourceRectangle: source,
 						color: colour,
