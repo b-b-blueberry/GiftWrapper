@@ -47,29 +47,27 @@ namespace GiftWrapper
 
 		public override void Entry(IModHelper helper)
 		{
-			Instance = this;
-			Config = Helper.ReadConfig<Config>();
+			ModEntry.Instance = this;
+			ModEntry.Config = Helper.ReadConfig<Config>();
 
-			Helper.Events.Content.AssetRequested += AssetManager.AssetRequested;
-			Helper.Events.GameLoop.GameLaunched += this.GameLoop_GameLaunched;
-			Helper.Events.Input.ButtonPressed += this.Input_ButtonPressed;
-			Helper.Events.Display.MenuChanged += this.Display_MenuChanged;
-			SpaceEvents.BeforeGiftGiven += this.SpaceEvents_BeforeGiftGiven;
+			Helper.Events.GameLoop.GameLaunched += OnGameLaunched;
 		}
 
-		private void LoadApis()
+		private bool TryLoadApis()
 		{
 			// Add Json Assets items
 			JsonAssets = Helper.ModRegistry.GetApi<IJsonAssetsAPI>("spacechase0.JsonAssets");
 			if (JsonAssets == null)
 			{
 				Monitor.Log("Can't access the Json Assets API. Is the mod installed correctly?", LogLevel.Error);
-				return;
+				return false;
 			}
 			JsonAssets.LoadAssets(Path.Combine(Helper.DirectoryPath, ContentPackPath));
 
 			// Add GMCM config page
 			this.RegisterGenericModConfigMenuPage();
+
+			return true;
 		}
 
 		private void RegisterGenericModConfigMenuPage()
@@ -96,9 +94,19 @@ namespace GiftWrapper
 				setValue: (bool value) => Config.InteractUsingToolButton = value);
 		}
 
-		private void GameLoop_GameLaunched(object sender, GameLaunchedEventArgs e)
+		private void OnGameLaunched(object sender, GameLaunchedEventArgs e)
 		{
-			this.LoadApis();
+			if (!this.TryLoadApis())
+			{
+				this.Monitor.Log("Failed to load required mods. Mod will not be loaded.", LogLevel.Error);
+				return;
+			}
+
+			// Event handlers
+			Helper.Events.Content.AssetRequested += AssetManager.OnAssetRequested;
+			Helper.Events.Input.ButtonPressed += OnButtonPressed;
+			Helper.Events.Display.MenuChanged += OnMenuChanged;
+			SpaceEvents.BeforeGiftGiven += OnGiftGiven;
 		}
 
 		private void Display_MenuChanged(object sender, MenuChangedEventArgs e)
