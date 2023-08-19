@@ -7,14 +7,12 @@ using StardewValley.Menus;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Object = StardewValley.Object;
 
 namespace GiftWrapper
 {
 	public class GiftWrapMenu : ItemGrabMenu
 	{
-		public IModHelper Helper => ModEntry.Instance.Helper;
-		public ITranslationHelper i18n => ModEntry.Instance.i18n;
-
 		/// <summary> Custom sprite assets for menu elements </summary>
 		public Texture2D Texture;
 		/// <summary> Clickable container to display items placed by the user for turning into wrapped gifts </summary>
@@ -29,7 +27,7 @@ namespace GiftWrapper
 		/// <summary> Item instance currently in the ItemSlot container to be wrapped </summary>
 		public Item ItemToWrap;
 		/// <summary> Whether to have the contextual clickable gift wrap confirm button be visible and interactible </summary>
-		public bool ShowWrapButton { get => ItemToWrap != null; }
+		public bool ShowWrapButton { get => this.ItemToWrap is not null; }
 
 		/// <summary> Current wrapped gift animation timer </summary>
 		private int _animTimer;
@@ -44,10 +42,10 @@ namespace GiftWrapper
 		/// <summary> Reflects InventoryMenu item shake </summary>
 		private readonly IReflectedField<Dictionary<int, double>> _iconShakeTimerField;
 
-		private static readonly Rectangle BackgroundSource = new Rectangle(0, 0, 128, 80);
-		private static readonly Rectangle DecorationSource = new Rectangle(0, BackgroundSource.Height, 96, 64);
-		private static readonly Rectangle ItemSlotSource = new Rectangle(BackgroundSource.X + BackgroundSource.Width - 18, BackgroundSource.Y + BackgroundSource.Height, 18, 18);
-		private static readonly Rectangle WrapButtonSource = new Rectangle(548, 262, 18, 20);
+		private static readonly Rectangle BackgroundSource = new(0, 0, 128, 80);
+		private static readonly Rectangle DecorationSource = new(0, BackgroundSource.Height, 96, 64);
+		private static readonly Rectangle ItemSlotSource = new(BackgroundSource.X + BackgroundSource.Width - 18, BackgroundSource.Y + BackgroundSource.Height, 18, 18);
+		private static readonly Rectangle WrapButtonSource = new(548, 262, 18, 20);
 		private Rectangle _backgroundArea;
 		private Rectangle _decorationArea;
 		private new const int borderWidth = 4;
@@ -61,13 +59,13 @@ namespace GiftWrapper
 			Game1.freezeControls = true;
 
 			// Custom fields
-			GiftWrapPosition = position;
-			Texture = Game1.content.Load<Texture2D>(ModEntry.GameContentTexturePath);
+			this.GiftWrapPosition = position;
+			this.Texture = Game1.content.Load<Texture2D>(ModEntry.GameContentTexturePath);
 
 			// Base fields
 			this.initializeUpperRightCloseButton();
-			trashCan = null;
-			_iconShakeTimerField = Helper.Reflection.GetField<Dictionary<int, double>>(inventory, "_iconShakeTimer");
+			this.trashCan = null;
+			this._iconShakeTimerField = ModEntry.Instance.Helper.Reflection.GetField<Dictionary<int, double>>(this.inventory, "_iconShakeTimer");
 
 			Point centre = Game1.graphics.GraphicsDevice.Viewport.Bounds.Center;
 			if (Context.IsSplitScreen)
@@ -76,40 +74,40 @@ namespace GiftWrapper
 				centre.X = centre.X / 3 * 2;
 			}
 
-			_borderScaled = borderWidth * Game1.pixelZoom;
+			this._borderScaled = borderWidth * Game1.pixelZoom;
 			int yOffset;
 			int ID = 1000;
 
 			// Widen inventory to allow more space in the text area above
-			inventory.width += _inventoryExtraWidth;
-			inventory.xPositionOnScreen -= _inventoryExtraWidth / 2;
+			this.inventory.width += this._inventoryExtraWidth;
+			this.inventory.xPositionOnScreen -= this._inventoryExtraWidth / 2;
 
 			// Background panel
 			yOffset = -32 * Game1.pixelZoom;
-			_backgroundArea = new Rectangle(
-				inventory.xPositionOnScreen - (_borderScaled / 2),
+			this._backgroundArea = new Rectangle(
+				this.inventory.xPositionOnScreen - (this._borderScaled / 2),
 				centre.Y + yOffset - (BackgroundSource.Height / 2 * Game1.pixelZoom),
 				BackgroundSource.Width * Game1.pixelZoom,
 				BackgroundSource.Height * Game1.pixelZoom);
 
 			yOffset = -28 * Game1.pixelZoom;
-			_decorationArea = new Rectangle(
-				_backgroundArea.X + ((BackgroundSource.Width - DecorationSource.Width) / 2 * Game1.pixelZoom),
+			this._decorationArea = new Rectangle(
+				this._backgroundArea.X + ((BackgroundSource.Width - DecorationSource.Width) / 2 * Game1.pixelZoom),
 				centre.Y + yOffset - (DecorationSource.Height / 2 * Game1.pixelZoom),
 				DecorationSource.Width * Game1.pixelZoom,
 				DecorationSource.Height * Game1.pixelZoom);
 
-			inventory.yPositionOnScreen = _backgroundArea.Y + _backgroundArea.Height + (borderWidth * 2 * Game1.pixelZoom);
+			this.inventory.yPositionOnScreen = this._backgroundArea.Y + this._backgroundArea.Height + (borderWidth * 2 * Game1.pixelZoom);
 
 			// Item slot clickable
 			yOffset = -24 * Game1.pixelZoom;
-			ItemSlot = new ClickableTextureComponent(
+			this.ItemSlot = new ClickableTextureComponent(
 				bounds: new Rectangle(
-					_backgroundArea.X + ((BackgroundSource.Width - ItemSlotSource.Width) / 2 * Game1.pixelZoom),
-					_backgroundArea.Y + (_backgroundArea.Height / 2) + yOffset,
+					this._backgroundArea.X + ((BackgroundSource.Width - ItemSlotSource.Width) / 2 * Game1.pixelZoom),
+					this._backgroundArea.Y + (this._backgroundArea.Height / 2) + yOffset,
 					ItemSlotSource.Width * Game1.pixelZoom,
 					ItemSlotSource.Height * Game1.pixelZoom),
-				texture: Texture,
+				texture: this.Texture,
 				sourceRect: ItemSlotSource,
 				scale: Game1.pixelZoom, drawShadow: false)
 			{
@@ -119,10 +117,10 @@ namespace GiftWrapper
 			// Wrap button clickable
 			yOffset = 16 * Game1.pixelZoom;
 			Texture2D junimoTexture = Game1.content.Load<Texture2D>(@"LooseSprites/JunimoNote");
-			WrapButton = new ClickableTextureComponent(
+			this.WrapButton = new ClickableTextureComponent(
 				bounds: new Rectangle(
-					ItemSlot.bounds.X,
-					_backgroundArea.Y + (_backgroundArea.Height / 2) + yOffset,
+					this.ItemSlot.bounds.X,
+					this._backgroundArea.Y + (this._backgroundArea.Height / 2) + yOffset,
 					WrapButtonSource.Width * Game1.pixelZoom,
 					WrapButtonSource.Height * Game1.pixelZoom),
 				texture: junimoTexture,
@@ -133,7 +131,7 @@ namespace GiftWrapper
 			};
 
 			// Clickable navigation
-			_defaultClickable = ItemSlot.myID;
+			this._defaultClickable = this.ItemSlot.myID;
 			this.populateClickableComponentList();
 
 			ModEntry.Instance.Helper.Events.GameLoop.UpdateTicked += this.Event_UnfreezeControls;
@@ -154,10 +152,10 @@ namespace GiftWrapper
 
 		protected override void cleanupBeforeExit()
 		{
-			if (ItemToWrap != null)
+			if (this.ItemToWrap is not null)
 			{
 				// Return items in item slot to player when closing
-				Game1.createItemDebris(item: ItemToWrap, origin: Game1.player.Position, direction: -1);
+				Game1.createItemDebris(item: this.ItemToWrap, origin: Game1.player.Position, direction: -1);
 			}
 			base.cleanupBeforeExit();
 		}
@@ -170,12 +168,12 @@ namespace GiftWrapper
 
 		public override void receiveLeftClick(int x, int y, bool playSound = true)
 		{
-			if (ItemSlot.containsPoint(x, y) && ItemToWrap != null)
+			if (this.ItemSlot.containsPoint(x, y) && this.ItemToWrap is not null)
 			{
-				if (inventory.tryToAddItem(toPlace: ItemToWrap, sound: playSound ? "coin" : null) == null)
+				if (this.inventory.tryToAddItem(toPlace: this.ItemToWrap, sound: playSound ? "coin" : null) is null)
 				{
 					// Take all from wrapping
-					ItemToWrap = null;
+					this.ItemToWrap = null;
 				}
 				else
 				{
@@ -183,14 +181,14 @@ namespace GiftWrapper
 					Game1.playSound("cancel");
 				}
 			}
-			else if (WrapButton.containsPoint(x, y) && ShowWrapButton && ItemToWrap != null)
+			else if (this.WrapButton.containsPoint(x, y) && this.ShowWrapButton && this.ItemToWrap is not null)
 			{
-				Item wrappedGift = ModEntry.Instance.GetWrappedGift(modData: null);
-				ModEntry.Instance.PackItem(ref wrappedGift, ItemToWrap, GiftWrapPosition, showMessage: true);
+				Object wrappedGift = ModEntry.GetWrappedGift(modData: null);
+				ModEntry.PackItem(ref wrappedGift, this.ItemToWrap, this.GiftWrapPosition, showMessage: true);
 				if (wrappedGift != null)
 				{
 					// Convert wrapping to gift and close menu, giving the player the wrapped gift
-					ItemToWrap = null;
+					this.ItemToWrap = null;
 					Game1.player.addItemToInventory(wrappedGift);
 					Game1.playSound("discoverMineral");
 					this.exitThisMenuNoSound();
@@ -201,44 +199,42 @@ namespace GiftWrapper
 					Game1.playSound("cancel");
 				}
 			}
-			else if (inventory.getInventoryPositionOfClick(x, y) is int index && index >= 0 && inventory.actualInventory[index] != null)
+			else if (this.inventory.getInventoryPositionOfClick(x, y) is int index && index >= 0 && this.inventory.actualInventory[index] is not null)
 			{
-				if (ItemToWrap != null && ItemToWrap.canStackWith(inventory.actualInventory[index]))
+				if (this.ItemToWrap is not null && this.ItemToWrap.canStackWith(this.inventory.actualInventory[index]))
 				{
 					// Try add all to wrapping
-					int maximumToSend = Math.Min(inventory.actualInventory[index].Stack, ItemToWrap.maximumStackSize() - ItemToWrap.Stack);
-					ItemToWrap.Stack += maximumToSend;
-					inventory.actualInventory[index].Stack -= maximumToSend;
-					if (inventory.actualInventory[index].Stack < 1)
-						inventory.actualInventory[index] = null;
+					int maximumToSend = Math.Min(this.inventory.actualInventory[index].Stack, this.ItemToWrap.maximumStackSize() - this.ItemToWrap.Stack);
+					this.ItemToWrap.Stack += maximumToSend;
+					this.inventory.actualInventory[index].Stack -= maximumToSend;
+					if (this.inventory.actualInventory[index].Stack < 1)
+						this.inventory.actualInventory[index] = null;
 					Game1.playSound("coin");
 				}
 				else
 				{
 					// Add all to wrapping
-					Item tempItem = inventory.actualInventory[index];
-					inventory.actualInventory[index] = ItemToWrap;
-					ItemToWrap = tempItem;
+					(this.ItemToWrap, this.inventory.actualInventory[index]) = (this.inventory.actualInventory[index], this.ItemToWrap);
 					Game1.playSound("coin");
 				}
 			}
 			else
 			{
 				// Close menu
-				if (upperRightCloseButton.containsPoint(x, y))
+				if (this.upperRightCloseButton.containsPoint(x, y))
 					this.exitThisMenu();
 			}
 		}
 		
 		public override void receiveRightClick(int x, int y, bool playSound = true)
 		{
-			if (ItemSlot.containsPoint(x, y) && ItemToWrap != null)
+			if (this.ItemSlot.containsPoint(x, y) && this.ItemToWrap is not null)
 			{
-				if (inventory.tryToAddItem(toPlace: ItemToWrap.getOne()) == null)
+				if (this.inventory.tryToAddItem(toPlace: this.ItemToWrap.getOne()) is null)
 				{
 					// Take one from wrapping
-					if (ItemToWrap.maximumStackSize() <= 1 || --ItemToWrap.Stack < 1)
-						ItemToWrap = null;
+					if (this.ItemToWrap.maximumStackSize() <= 1 || --this.ItemToWrap.Stack < 1)
+						this.ItemToWrap = null;
 				}
 				else
 				{
@@ -246,36 +242,36 @@ namespace GiftWrapper
 					Game1.playSound("cancel");
 				}
 			}
-			else if (inventory.getInventoryPositionOfClick(x, y) is int index && index >= 0 && inventory.actualInventory[index] != null)
+			else if (this.inventory.getInventoryPositionOfClick(x, y) is int index && index >= 0 && this.inventory.actualInventory[index] is not null)
 			{
 				bool movedOne = false;
-				if (ItemToWrap != null)
+				if (this.ItemToWrap is not null)
 				{
 					// Add one to wrapping
-					if (ItemToWrap.canStackWith(inventory.actualInventory[index]))
+					if (this.ItemToWrap.canStackWith(this.inventory.actualInventory[index]))
 					{
-						++ItemToWrap.Stack;
+						++this.ItemToWrap.Stack;
 						movedOne = true;
 					}
 					// Take all of wrapping and add one to wrap
-					else if (inventory.tryToAddItem(toPlace: ItemToWrap) == null)
+					else if (this.inventory.tryToAddItem(toPlace: this.ItemToWrap) is null)
 					{
-						ItemToWrap = inventory.actualInventory[index].getOne();
+						this.ItemToWrap = this.inventory.actualInventory[index].getOne();
 						movedOne = true;
 					}
 				}
 				else
 				{
 					// Add one to wrapping
-					ItemToWrap = inventory.actualInventory[index].getOne();
+					this.ItemToWrap = this.inventory.actualInventory[index].getOne();
 					movedOne = true;
 				}
 
 				if (movedOne)
 				{
 					// Take one from inventory
-					if (inventory.actualInventory[index].maximumStackSize() <= 1 || --inventory.actualInventory[index].Stack < 1)
-						inventory.actualInventory[index] = null;
+					if (this.inventory.actualInventory[index].maximumStackSize() <= 1 || --this.inventory.actualInventory[index].Stack < 1)
+						this.inventory.actualInventory[index] = null;
 					Game1.playSound("coin");
 				}
 				else
@@ -288,17 +284,17 @@ namespace GiftWrapper
 
 		public override void performHoverAction(int x, int y)
 		{
-			hoverText = "";
-			hoveredItem = null;
-			if (ItemSlot.containsPoint(x, y) && ItemToWrap != null) 
+			this.hoverText = "";
+			this.hoveredItem = null;
+			if (this.ItemSlot.containsPoint(x, y) && this.ItemToWrap is not null) 
 			{
 				// Hover item slot
-				hoveredItem = ItemToWrap;
+				this.hoveredItem = this.ItemToWrap;
 			}
-			else if (inventory.getInventoryPositionOfClick(x, y) is int index && index >= 0 && inventory.actualInventory[index] is Item item && item != null)
+			else if (this.inventory.getInventoryPositionOfClick(x, y) is int index && index >= 0 && this.inventory.actualInventory[index] is Item item && item is not null)
 			{
 				// Hover inventory item
-				hoveredItem = item;
+				this.hoveredItem = item;
 			}
 		}
 
@@ -315,12 +311,12 @@ namespace GiftWrapper
 			{
 				// Gamepad navigation
 				int inventoryWidth = this.GetColumnCount();
-				int current = currentlySnappedComponent != null ? currentlySnappedComponent.myID : -1;
+				int current = this.currentlySnappedComponent is not null ? this.currentlySnappedComponent.myID : -1;
 				int snapTo = -1;
 				if (Game1.options.doesInputListContain(Game1.options.moveLeftButton, key))
 				{
 					// Left
-					if (current < inventory.inventory.Count && current % inventoryWidth == 0)
+					if (current < this.inventory.inventory.Count && current % inventoryWidth == 0)
 					{
 						// Inventory =|
 						snapTo = current;
@@ -329,7 +325,7 @@ namespace GiftWrapper
 				else if (Game1.options.doesInputListContain(Game1.options.moveRightButton, key))
 				{
 					// Right
-					if (current < inventory.inventory.Count && current % inventoryWidth == inventoryWidth - 1)
+					if (current < this.inventory.inventory.Count && current % inventoryWidth == inventoryWidth - 1)
 					{
 						// Inventory =|
 						snapTo = current;
@@ -338,17 +334,17 @@ namespace GiftWrapper
 				else if (Game1.options.doesInputListContain(Game1.options.moveUpButton, key))
 				{
 					// Up
-					if (current == WrapButton.myID)
+					if (current == this.WrapButton.myID)
 					{
 						// WrapButton => ItemSlot
-						snapTo = ItemSlot.myID;
+						snapTo = this.ItemSlot.myID;
 					}
-					else if (current >= 0 && current < inventory.inventory.Count)
+					else if (current >= 0 && current < this.inventory.inventory.Count)
 					{
 						if (current < inventoryWidth)
 						{
 							// Inventory => WrapButton/ItemSlot
-							snapTo = ShowWrapButton ? WrapButton.myID : ItemSlot.myID;
+							snapTo = this.ShowWrapButton ? this.WrapButton.myID : this.ItemSlot.myID;
 						}
 						else
 						{
@@ -360,12 +356,12 @@ namespace GiftWrapper
 				else if (Game1.options.doesInputListContain(Game1.options.moveDownButton, key))
 				{
 					// Down
-					if (current == ItemSlot.myID)
+					if (current == this.ItemSlot.myID)
 					{
 						// ItemSlot => WrapButton/Inventory
-						snapTo = ShowWrapButton ? WrapButton.myID : 0;
+						snapTo = this.ShowWrapButton ? this.WrapButton.myID : 0;
 					}
-					else if (current == WrapButton.myID)
+					else if (current == this.WrapButton.myID)
 					{
 						// WrapButton => Inventory
 						snapTo = 0;
@@ -384,53 +380,53 @@ namespace GiftWrapper
 		public override void receiveGamePadButton(Buttons b)
 		{
 			// Contextual navigation
-			int current = currentlySnappedComponent != null ? currentlySnappedComponent.myID : -1;
+			int current = this.currentlySnappedComponent is not null ? this.currentlySnappedComponent.myID : -1;
 			int snapTo = -1;
-			if (b == Buttons.LeftShoulder)
+			if (b is Buttons.LeftShoulder)
 			{
 				// Left
-				if (current == ItemSlot.myID)
+				if (current == this.ItemSlot.myID)
 					// ItemSlot => Inventory
 					snapTo = 0;
-				else if (current == WrapButton.myID)
+				else if (current == this.WrapButton.myID)
 					// WrapButton => ItemSlot
-					snapTo = ItemSlot.myID;
-				else if (current < inventory.inventory.Count)
+					snapTo = this.ItemSlot.myID;
+				else if (current < this.inventory.inventory.Count)
 					// Inventory => WrapButton/ItemSlot
-					snapTo = ShowWrapButton ? WrapButton.myID : ItemSlot.myID;
+					snapTo = this.ShowWrapButton ? this.WrapButton.myID : this.ItemSlot.myID;
 				else
 					// ??? => Default
-					snapTo = _defaultClickable;
+					snapTo = this._defaultClickable;
 			}
-			if (b == Buttons.RightShoulder)
+			if (b is Buttons.RightShoulder)
 			{
 				// Right
-				if (current == ItemSlot.myID)
+				if (current == this.ItemSlot.myID)
 					// ItemSlot => WrapButton/Inventory
-					snapTo = ShowWrapButton ? WrapButton.myID : 0;
-				else if (current == WrapButton.myID)
+					snapTo = this.ShowWrapButton ? this.WrapButton.myID : 0;
+				else if (current == this.WrapButton.myID)
 					// WrapButton => Inventory
 					snapTo = 0;
-				else if (current > inventory.inventory.Count)
+				else if (current > this.inventory.inventory.Count)
 					// Inventory => ItemSlot
-					snapTo = ItemSlot.myID;
+					snapTo = this.ItemSlot.myID;
 				else
 					// ??? => Default
-					snapTo = _defaultClickable;
+					snapTo = this._defaultClickable;
 			}
 			this.setCurrentlySnappedComponentTo(snapTo);
 		}
 
 		public override void snapToDefaultClickableComponent()
 		{
-			if (_defaultClickable == -1)
+			if (this._defaultClickable == -1)
 				return;
-			this.setCurrentlySnappedComponentTo(_defaultClickable);
+			this.setCurrentlySnappedComponentTo(this._defaultClickable);
 		}
 
 		public override void setCurrentlySnappedComponentTo(int id)
 		{
-			if (id == -1 || this.getComponentWithID(id) == null)
+			if (id == -1 || this.getComponentWithID(id) is null)
 				return;
 
 			this.currentlySnappedComponent = this.getComponentWithID(id);
@@ -440,10 +436,10 @@ namespace GiftWrapper
 		public override void update(GameTime time)
 		{
 			// WrapButton animation loop
-			_animTimer += time.ElapsedGameTime.Milliseconds;
-			if (_animTimer >= AnimTimerLimit)
-				_animTimer = 0;
-			_animFrame = (int)((float)_animTimer / AnimTimerLimit * AnimFrames);
+			this._animTimer += time.ElapsedGameTime.Milliseconds;
+			if (this._animTimer >= AnimTimerLimit)
+				this._animTimer = 0;
+			this._animFrame = (int)((float)this._animTimer / AnimTimerLimit * AnimFrames);
 
 			base.update(time);
 		}
@@ -455,64 +451,109 @@ namespace GiftWrapper
 				texture: Game1.fadeToBlackRect,
 				destinationRectangle: Game1.graphics.GraphicsDevice.Viewport.GetTitleSafeArea(),
 				sourceRectangle: null,
-				Color.Black * 0.3f);
+				color: Color.Black * 0.3f);
 
 			// Inventory panel
 			this.DrawInventory(b);
 
 			// Background panel
-			b.Draw(Texture, destinationRectangle: _backgroundArea, sourceRectangle: BackgroundSource,
-				Color.White, rotation: 0f, origin: Vector2.Zero, SpriteEffects.None, layerDepth: 1f);
-			b.Draw(Texture, destinationRectangle: _decorationArea, sourceRectangle: DecorationSource,
-				Color.White, rotation: 0f, origin: Vector2.Zero, SpriteEffects.None, layerDepth: 1f);
-			this.DrawPinkBorder(b, area: _backgroundArea, drawBorderOutside: true, drawFillColour: false);
+			b.Draw(
+				texture: this.Texture,
+				destinationRectangle: this._backgroundArea,
+				sourceRectangle: BackgroundSource,
+				color: Color.White,
+				rotation: 0,
+				origin: Vector2.Zero,
+				effects: SpriteEffects.None,
+				layerDepth: 1);
+			b.Draw(
+				texture: this.Texture,
+				destinationRectangle: this._decorationArea,
+				sourceRectangle: DecorationSource,
+				color: Color.White,
+				rotation: 0,
+				origin: Vector2.Zero,
+				effects: SpriteEffects.None,
+				layerDepth: 1);
+			this.DrawPinkBorder(
+				b: b,
+				area: this._backgroundArea,
+				drawBorderOutside: true,
+				drawFillColour: false);
 
 			// Info panel
-			Rectangle textPanelArea = new Rectangle(
-				_backgroundArea.X + _backgroundArea.Width + _borderScaled,
-				_backgroundArea.Y,
-				inventory.width - _backgroundArea.Width + (1 * Game1.pixelZoom),
-				_backgroundArea.Height);
-			this.DrawPinkBorder(b, area: textPanelArea, drawBorderOutside: true, drawFillColour: true);
+			Rectangle textPanelArea = new(
+				x: this._backgroundArea.X + this._backgroundArea.Width + this._borderScaled,
+				y: this._backgroundArea.Y,
+				width: this.inventory.width - this._backgroundArea.Width + (1 * Game1.pixelZoom),
+				height: this._backgroundArea.Height);
+			this.DrawPinkBorder(
+				b: b,
+				area: textPanelArea,
+				drawBorderOutside: true,
+				drawFillColour: true);
 
+			// Body text
 			Vector2 margin = new Vector2(2, 4) * Game1.pixelZoom;
-			string text = i18n.Get("menu.infopanel.body");
-			// Give a little extra leeway with non-English locales to fit them into the text area
-			text = Game1.parseText(text, Game1.smallFont, width: textPanelArea.Width
-				- (LocalizedContentManager.CurrentLanguageCode.ToString() == "en" ? (int)margin.X : 0));
+			string text = ModEntry.I18n.Get("menu.infopanel.body");
+
+			// Give a little extra leeway with non-English locales to fit them into the body text area
+			text = Game1.parseText(
+				text: text,
+				whichFont: Game1.smallFont,
+				width: textPanelArea.Width - (LocalizedContentManager.CurrentLanguageCode is LocalizedContentManager.LanguageCode.en ? (int)margin.X : 0));
+
 			if (Game1.smallFont.MeasureString(text).Y > textPanelArea.Height)
 			{
-				// Remove the last line if text overflows
-				IEnumerable<string> split = text.Split('.').Where(str => !string.IsNullOrWhiteSpace(str));
-				text = split.Aggregate("", (total, str) => str != split.Last() ? total + str + "." : total);
+				// Remove the last line if body text overflows
+				text = text[..text.LastIndexOf('.')];
 			}
-			Utility.drawTextWithShadow(b, text, Game1.smallFont, position: new Vector2(textPanelArea.X + (int)margin.X, textPanelArea.Y + (int)margin.Y), Game1.textColor);
+			Utility.drawTextWithShadow(
+				b: b,
+				text: text,
+				font: Game1.smallFont,
+				position: new Vector2(x: textPanelArea.X + (int)margin.X, y: textPanelArea.Y + (int)margin.Y),
+				color: Game1.textColor);
 
 			// Item clickables:
 			// Item slot
-			ItemSlot.draw(b);
+			this.ItemSlot.draw(b);
 			// Item inside the slot
-			ItemToWrap?.drawInMenu(b, location: new Vector2(ItemSlot.bounds.X, ItemSlot.bounds.Y), scaleSize: 1f);
-			if (ShowWrapButton)
+			this.ItemToWrap?.drawInMenu(
+				spriteBatch: b,
+				location: new Vector2(x: this.ItemSlot.bounds.X, y: this.ItemSlot.bounds.Y),
+				scaleSize: 1);
+			if (this.ShowWrapButton)
 			{
 				// Wrap button
 				b.Draw(
-					WrapButton.texture,
-					destinationRectangle: WrapButton.bounds,
-					sourceRectangle: new Rectangle(
-						WrapButton.sourceRect.X + (_animFrame * WrapButton.sourceRect.Width),
-						WrapButton.sourceRect.Y,
-						WrapButton.sourceRect.Width,
-						WrapButton.sourceRect.Height),
-					Color.White, rotation: 0f, origin: Vector2.Zero, SpriteEffects.None, layerDepth: 1f);
+					texture: this.WrapButton.texture,
+					destinationRectangle: this.WrapButton.bounds,
+					sourceRectangle: new(
+						x: this.WrapButton.sourceRect.X + (this._animFrame * this.WrapButton.sourceRect.Width),
+						y: this.WrapButton.sourceRect.Y,
+						width: this.WrapButton.sourceRect.Width,
+						height: this.WrapButton.sourceRect.Height),
+					color: Color.White,
+					rotation: 0,
+					origin: Vector2.Zero,
+					effects: SpriteEffects.None,
+					layerDepth: 1);
 			}
 
 			// Tooltips
-			if (hoveredItem != null)
-				IClickableMenu.drawToolTip(b, hoveredItem.getDescription(), hoveredItem.DisplayName, hoveredItem, heldItem != null);
+			if (this.hoveredItem is not null)
+			{
+				IClickableMenu.drawToolTip(
+					b: b,
+					hoverText: this.hoveredItem.getDescription(),
+					hoverTitle: this.hoveredItem.DisplayName,
+					hoveredItem: this.hoveredItem,
+					heldItem: this.heldItem is not null);
+			}
 
 			// Cursors
-			Game1.mouseCursorTransparency = 1f;
+			Game1.mouseCursorTransparency = 1;
 			this.drawMouse(b);
 		}
 
@@ -524,208 +565,247 @@ namespace GiftWrapper
 		{
 			// Background card
 			Vector4 margin = new Vector4(2, 4, 5, 4) * Game1.pixelZoom;
-			Rectangle area = new Rectangle(inventory.xPositionOnScreen - (int)margin.X, inventory.yPositionOnScreen - (int)margin.Y, inventory.width + (int)margin.Z, inventory.height + (int)margin.W);
-			this.DrawPinkBorder(b, area, drawBorderOutside: true, drawFillColour: true);
+			Rectangle area = new(
+				x: this.inventory.xPositionOnScreen - (int)margin.X,
+				y: this.inventory.yPositionOnScreen - (int)margin.Y,
+				width: this.inventory.width + (int)margin.Z,
+				height: this.inventory.height + (int)margin.W);
+			this.DrawPinkBorder(
+				b: b,
+				area: area,
+				drawBorderOutside: true,
+				drawFillColour: true);
 
 			// Inventory item shakes
-			Dictionary<int, double> iconShakeTimer = _iconShakeTimerField.GetValue();
-			for (int key = 0; key < inventory.inventory.Count; ++key)
+			Dictionary<int, double> iconShakeTimer = this._iconShakeTimerField.GetValue();
+			for (int key = 0; key < this.inventory.inventory.Count; ++key)
 			{
 				if (iconShakeTimer.ContainsKey(key) && Game1.currentGameTime.TotalGameTime.TotalSeconds >= iconShakeTimer[key])
 					iconShakeTimer.Remove(key);
 			}
 
 			// Actual inventory
-			for (int i = 0; i < inventory.capacity; ++i)
+			for (int i = 0; i < this.inventory.capacity; ++i)
 			{
-				Vector2 position = new Vector2(
-					inventory.xPositionOnScreen
-						+ (_inventoryExtraWidth / 2)
-						+ (i % (inventory.capacity / inventory.rows) * 64)
-						+ (inventory.horizontalGap * (i % (inventory.capacity / inventory.rows))),
-					inventory.yPositionOnScreen
-						+ (i / (inventory.capacity / inventory.rows) * (64 + inventory.verticalGap))
-						+ (((i / (inventory.capacity / inventory.rows)) - 1) * 4)
-						- (i >= inventory.capacity / inventory.rows
-							|| !inventory.playerInventory || inventory.verticalGap != 0 ? 0 : 12));
+				Vector2 position = new(
+					x: this.inventory.xPositionOnScreen
+						+ (this._inventoryExtraWidth / 2)
+						+ (i % (this.inventory.capacity / this.inventory.rows) * 64)
+						+ (this.inventory.horizontalGap * (i % (this.inventory.capacity / this.inventory.rows))),
+					y: this.inventory.yPositionOnScreen
+						+ (i / (this.inventory.capacity / this.inventory.rows) * (64 + this.inventory.verticalGap))
+						+ (((i / (this.inventory.capacity / this.inventory.rows)) - 1) * 4)
+						- (i >= this.inventory.capacity / this.inventory.rows
+							|| !this.inventory.playerInventory || this.inventory.verticalGap != 0 ? 0 : 12));
 
 				// Item slot frames
 				b.Draw(
 					texture: Game1.menuTexture,
 					position,
 					sourceRectangle: Game1.getSourceRectForStandardTileSheet(tileSheet: Game1.menuTexture, tilePosition: 10),
-					Color.PeachPuff, rotation: 0.0f, origin: Vector2.Zero, scale: 1f, SpriteEffects.None, layerDepth: 0.5f);
+					color: Color.PeachPuff,
+					rotation: 0,
+					origin: Vector2.Zero,
+					scale: 1,
+					effects: SpriteEffects.None,
+					layerDepth: 0.5f);
 				b.Draw(
 					texture: Game1.menuTexture,
 					position,
 					sourceRectangle: Game1.getSourceRectForStandardTileSheet(tileSheet: Game1.menuTexture, tilePosition: 10),
-					Color.Orchid * 0.75f, rotation: 0.0f, origin: Vector2.Zero, scale: 1f, SpriteEffects.None, layerDepth: 0.5f);
+					color: Color.Orchid * 0.75f,
+					rotation: 0,
+					origin: Vector2.Zero,
+					scale: 1,
+					effects: SpriteEffects.None,
+					layerDepth: 0.5f);
 
 				// Greyed-out item slots
-				if ((inventory.playerInventory || inventory.showGrayedOutSlots) && i >= Game1.player.maxItems.Value)
+				if ((this.inventory.playerInventory || this.inventory.showGrayedOutSlots) && i >= Game1.player.maxItems.Value)
+				{
 					b.Draw(
 						texture: Game1.menuTexture,
 						position,
 						sourceRectangle: Game1.getSourceRectForStandardTileSheet(tileSheet: Game1.menuTexture, tilePosition: 57),
-						Color.White * 0.5f, rotation: 0f, origin: Vector2.Zero, scale: 1f, SpriteEffects.None, layerDepth: 0.5f);
-
-				if (i >= 12 || !inventory.playerInventory)
-					continue;
-
-				string text;
-				switch (i)
-				{
-					case 9:
-						text = "0";
-						break;
-					case 10:
-						text = "-";
-						break;
-					case 11:
-						text = "=";
-						break;
-					default:
-						text = string.Concat(i + 1);
-						break;
+						color: Color.White * 0.5f,
+						rotation: 0,
+						origin: Vector2.Zero,
+						scale: 1,
+						effects: SpriteEffects.None,
+						layerDepth: 0.5f);
 				}
+
+				if (i >= 12 || !this.inventory.playerInventory)
+					continue;
+				string text = i switch
+				{
+					9 => "0",
+					10 => "-",
+					11 => "=",
+					_ => string.Concat(i + 1),
+				};
 				Vector2 textOffset = Game1.tinyFont.MeasureString(text);
 				b.DrawString(
-					Game1.tinyFont,
-					text,
-					position + new Vector2(32f - (textOffset.X / 2f), -textOffset.Y),
-					i == Game1.player.CurrentToolIndex ? Color.Red : Color.DimGray);
+					spriteFont: Game1.tinyFont,
+					text: text,
+					position: position + new Vector2(32f - (textOffset.X / 2f), -textOffset.Y),
+					color: i == Game1.player.CurrentToolIndex ? Color.Red : Color.DimGray);
 			}
-			for (int i = 0; i < inventory.capacity; ++i)
+			for (int i = 0; i < this.inventory.capacity; ++i)
 			{
 				// Items
-				if (inventory.actualInventory.Count <= i || inventory.actualInventory.ElementAt(i) == null)
+				if (this.inventory.actualInventory.Count <= i || this.inventory.actualInventory.ElementAt(i) is null)
 					continue;
 
-				Vector2 location = new Vector2(
-					inventory.xPositionOnScreen
-					 + (i % (inventory.capacity / inventory.rows) * 64)
-					 + (inventory.horizontalGap * (i % (inventory.capacity / inventory.rows))),
-					inventory.yPositionOnScreen
-						+ (i / (inventory.capacity / inventory.rows) * (64 + inventory.verticalGap))
-						+ (((i / (inventory.capacity / inventory.rows)) - 1) * 4)
-						- (i >= inventory.capacity / inventory.rows
-						   || !inventory.playerInventory || inventory.verticalGap != 0 ? 0 : 12));
+				Vector2 location = new(
+					x: this.inventory.xPositionOnScreen
+					 + (i % (this.inventory.capacity / this.inventory.rows) * 64)
+					 + (this.inventory.horizontalGap * (i % (this.inventory.capacity / this.inventory.rows))),
+					y: this.inventory.yPositionOnScreen
+						+ (i / (this.inventory.capacity / this.inventory.rows) * (64 + this.inventory.verticalGap))
+						+ (((i / (this.inventory.capacity / this.inventory.rows)) - 1) * 4)
+						- (i >= this.inventory.capacity / this.inventory.rows
+						   || !this.inventory.playerInventory || this.inventory.verticalGap != 0 ? 0 : 12));
 
-				bool drawShadow = inventory.highlightMethod(inventory.actualInventory[i]);
+				bool drawShadow = this.inventory.highlightMethod(this.inventory.actualInventory[i]);
 				if (iconShakeTimer.ContainsKey(i))
-					location += 1f * new Vector2(Game1.random.Next(-1, 2), Game1.random.Next(-1, 2));
-				inventory.actualInventory[i].drawInMenu(b,
-					location,
-					scaleSize: inventory.inventory.Count > i ? inventory.inventory[i].scale : 1f,
-					transparency: !inventory.highlightMethod(inventory.actualInventory[i]) ? 0.25f : 1f,
+					location += 1 * new Vector2(Game1.random.Next(-1, 2), Game1.random.Next(-1, 2));
+				this.inventory.actualInventory[i].drawInMenu(b,
+					location: location,
+					scaleSize: this.inventory.inventory.Count > i ? this.inventory.inventory[i].scale : 1,
+					transparency: !this.inventory.highlightMethod(this.inventory.actualInventory[i]) ? 0.25f : 1,
 					layerDepth: 0.865f,
-					StackDrawType.Draw,
-					Color.White,
-					drawShadow);
+					drawStackNumber: StackDrawType.Draw,
+					color: Color.White,
+					drawShadow: drawShadow);
 			}
 		}
 
 		private void DrawPinkBorder(SpriteBatch b, Rectangle area, bool drawBorderOutside, bool drawFillColour)
 		{
-			Point point = new Point(100, 80);
-			Point cornerSize = new Point(5, 5);
+			Point point = new(x: 100, y: 80);
+			Point cornerSize = new(x: 5, y: 5);
 
 			Color colour = Color.White;
-			float rotation = 0f;
+			float rotation = 0;
 			Vector2 origin = Vector2.Zero;
 			float scale = Game1.pixelZoom;
 			SpriteEffects effects = SpriteEffects.None;
-			float layerDepth = 1f;
+			float layerDepth = 1;
 
 			Rectangle source;
 			Rectangle scaled;
 
 			if (drawBorderOutside)
 			{
-				area.X -= _borderScaled;
-				area.Y -= _borderScaled;
-				area.Width += _borderScaled * 2;
-				area.Height += _borderScaled * 2;
+				area.X -= this._borderScaled;
+				area.Y -= this._borderScaled;
+				area.Width += this._borderScaled * 2;
+				area.Height += this._borderScaled * 2;
 			}
 
 			if (drawFillColour)
 			{
 				// Fill colour
-				Rectangle fillArea = new Rectangle(area.X + _borderScaled, area.Y + _borderScaled, area.Width - (_borderScaled * 2), area.Height - (_borderScaled * 2));
-				source = new Rectangle(380, 437, 1, 8); // Sample the date field background from the HUD clock in cursors
+				Rectangle fillArea = new(area.X + this._borderScaled, area.Y + this._borderScaled, area.Width - (this._borderScaled * 2), area.Height - (this._borderScaled * 2));
+				source = new(x: 380, y: 437, width: 1, height: 8); // Sample the date field background from the HUD clock in cursors
 				b.Draw(
 					texture: Game1.mouseCursors,
 					destinationRectangle: fillArea,
 					sourceRectangle: source,
-					Color.White, rotation, origin, effects, layerDepth);
+					color: Color.White,
+					rotation: rotation,
+					origin: origin,
+					effects: effects,
+					layerDepth: layerDepth);
 				b.Draw(
-					 texture: Game1.mouseCursors,
-					 destinationRectangle: fillArea,
-					 sourceRectangle: source,
-					 Color.Plum * 0.65f, rotation, origin, effects, layerDepth);
+					texture: Game1.mouseCursors,
+					destinationRectangle: fillArea,
+					sourceRectangle: source,
+					color: Color.Plum * 0.65f,
+					rotation: rotation,
+					origin: origin,
+					effects: effects,
+					layerDepth: layerDepth);
 			}
 
+
 			// Sides:
-			// Top
-			source = new Rectangle(point.X + borderWidth + 1, point.Y, 1, borderWidth + 1);
-			scaled = new Rectangle(0, 0, source.Width * Game1.pixelZoom, source.Height * Game1.pixelZoom);
-			b.Draw(
-				Texture,
-				destinationRectangle: new Rectangle(area.X + (cornerSize.Y * Game1.pixelZoom), area.Y, area.Width - (cornerSize.X * Game1.pixelZoom * 2), scaled.Height),
-				sourceRectangle: source,
-				colour, rotation, origin, effects, layerDepth);
-			// Bottom
-			source = new Rectangle(point.X + borderWidth + 1, point.Y, 1, borderWidth);
-			scaled = new Rectangle(0, 0, source.Width * Game1.pixelZoom, source.Height * Game1.pixelZoom);
-			b.Draw(
-				Texture,
-				destinationRectangle: new Rectangle(area.X + (cornerSize.Y * Game1.pixelZoom), area.Y + area.Height - scaled.Height, area.Width - (cornerSize.X * Game1.pixelZoom * 2), scaled.Height),
-				sourceRectangle: source,
-				colour, rotation, origin, effects, layerDepth);
-			// Left
-			source = new Rectangle(point.X, point.Y + borderWidth, borderWidth, 1);
-			scaled = new Rectangle(0, 0, source.Width * Game1.pixelZoom, source.Height * Game1.pixelZoom);
-			b.Draw(
-				Texture,
-				destinationRectangle: new Rectangle(area.X, area.Y + (cornerSize.Y * Game1.pixelZoom), scaled.Width, area.Height - (cornerSize.Y * Game1.pixelZoom * 2)),
-				sourceRectangle: source,
-				colour, rotation, origin, effects, layerDepth);
-			// Right
-			source = new Rectangle(point.X + source.Width + 1, point.Y + borderWidth, borderWidth + 1, 1);
-			scaled = new Rectangle(0, 0, source.Width * Game1.pixelZoom, source.Height * Game1.pixelZoom);
-			b.Draw(
-				Texture,
-				destinationRectangle: new Rectangle(area.X + area.Width - scaled.Width, area.Y + (cornerSize.Y * Game1.pixelZoom), scaled.Width, area.Height - (cornerSize.Y * Game1.pixelZoom * 2)),
-				sourceRectangle: source,
-				colour, rotation, origin, effects, layerDepth);
+			{
+				Rectangle target;
+				void draw(Rectangle target, Rectangle source)
+				{
+					b.Draw(
+						texture: this.Texture,
+						destinationRectangle: target,
+						sourceRectangle: source,
+						color: colour,
+						rotation: rotation,
+						origin: origin,
+						effects: effects,
+						layerDepth: layerDepth);
+				}
+
+				// Top
+				source = new Rectangle(point.X + borderWidth + 1, point.Y, 1, borderWidth + 1);
+				scaled = new Rectangle(0, 0, source.Width * Game1.pixelZoom, source.Height * Game1.pixelZoom);
+				target = new Rectangle(area.X + (cornerSize.Y * Game1.pixelZoom), area.Y, area.Width - (cornerSize.X * Game1.pixelZoom * 2), scaled.Height);
+				draw(target: target, source: source);
+				// Bottom
+				source = new Rectangle(point.X + borderWidth + 1, point.Y, 1, borderWidth);
+				scaled = new Rectangle(0, 0, source.Width * Game1.pixelZoom, source.Height * Game1.pixelZoom);
+				target = new Rectangle(area.X + (cornerSize.Y * Game1.pixelZoom), area.Y + area.Height - scaled.Height, area.Width - (cornerSize.X * Game1.pixelZoom * 2), scaled.Height);
+				draw(target: target, source: source);
+				// Left
+				source = new Rectangle(point.X, point.Y + borderWidth, borderWidth, 1);
+				scaled = new Rectangle(0, 0, source.Width * Game1.pixelZoom, source.Height * Game1.pixelZoom);
+				target = new Rectangle(area.X, area.Y + (cornerSize.Y * Game1.pixelZoom), scaled.Width, area.Height - (cornerSize.Y * Game1.pixelZoom * 2));
+				draw(target: target, source: source);
+				// Right
+				source = new Rectangle(point.X + source.Width + 1, point.Y + borderWidth, borderWidth + 1, 1);
+				scaled = new Rectangle(0, 0, source.Width * Game1.pixelZoom, source.Height * Game1.pixelZoom);
+				target = new Rectangle(area.X + area.Width - scaled.Width, area.Y + (cornerSize.Y * Game1.pixelZoom), scaled.Width, area.Height - (cornerSize.Y * Game1.pixelZoom * 2));
+				draw(target: target, source: source);
+			}
 
 			// Corners:
-			source = new Rectangle(point.X, point.Y, cornerSize.X, cornerSize.Y);
-			scaled = new Rectangle(0, 0, source.Width * Game1.pixelZoom, source.Height * Game1.pixelZoom);
-			// Top-left
-			b.Draw(
-				Texture,
-				position: new Vector2(area.X, area.Y),
-				sourceRectangle: source,
-				colour, rotation, origin, scale, effects, layerDepth);
-			// Bottom-left
-			b.Draw(
-				Texture,
-				position: new Vector2(area.X, area.Y + area.Height - scaled.Height),
-				sourceRectangle: new Rectangle(source.X, source.Y + source.Height, source.Width, source.Height),
-				colour, rotation, origin, scale, effects, layerDepth);
-			// Top-right
-			b.Draw(
-				Texture,
-				position: new Vector2(area.X + area.Width - scaled.Width, area.Y),
-				sourceRectangle: new Rectangle(source.X + source.Width, source.Y, source.Width, source.Height),
-				colour, rotation, origin, scale, effects, layerDepth);
-			// Bottom-right
-			b.Draw(
-				Texture,
-				position: new Vector2(area.X + area.Width - scaled.Width, area.Y + area.Height - scaled.Height),
-				sourceRectangle: new Rectangle(source.X + source.Width, source.Y + source.Height, source.Width, source.Height),
-				colour, rotation, origin, scale, effects, layerDepth);
+			{
+				Vector2 target;
+				Rectangle corner;
+				void draw(Vector2 target, Rectangle source)
+				{
+					b.Draw(
+						texture: this.Texture,
+						position: target,
+						sourceRectangle: source,
+						color: colour,
+						rotation: rotation,
+						origin: origin,
+						scale: scale,
+						effects: effects,
+						layerDepth: layerDepth);
+				}
+
+				source = new Rectangle(point.X, point.Y, cornerSize.X, cornerSize.Y);
+				scaled = new Rectangle(0, 0, source.Width * Game1.pixelZoom, source.Height * Game1.pixelZoom);
+
+				// Top-left
+				target = new Vector2(area.X, area.Y);
+				corner = source;
+				draw(target: target, source: corner);
+				// Bottom-left
+				target = new Vector2(area.X, area.Y + area.Height - scaled.Height);
+				corner = new Rectangle(source.X, source.Y + source.Height, source.Width, source.Height);
+				draw(target: target, source: corner);
+				// Top-right
+				target = new Vector2(area.X + area.Width - scaled.Width, area.Y);
+				corner = new Rectangle(source.X + source.Width, source.Y, source.Width, source.Height);
+				draw(target: target, source: corner);
+				// Bottom-right
+				target = new Vector2(area.X + area.Width - scaled.Width, area.Y + area.Height - scaled.Height);
+				corner = new Rectangle(source.X + source.Width, source.Y + source.Height, source.Width, source.Height);
+				draw(target: target, source: corner);
+			}
 		}
 	}
 }
