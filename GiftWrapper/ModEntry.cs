@@ -26,16 +26,24 @@ namespace GiftWrapper
 		internal static ITranslationHelper I18n => ModEntry.Instance.Helper.Translation;
 		internal static IJsonAssetsAPI JsonAssets;
 
-		internal static Lazy<Texture2D> Sprites = new(() => ModEntry.Instance.Helper.GameContent.Load<Texture2D>(ModEntry.GameContentTexturePath));
 
-		public const string AssetPrefix = "blueberry.gw.";
+		public const string AssetPrefix = "blueberry.GiftWrapper.";
+		public const string ItemPrefix = "blueberry.gw.";
 		public const string GiftWrapName = "giftwrap";
 		public const string WrappedGiftName = "wrappedgift";
 
-		internal static readonly string GameContentTexturePath = Path.Combine(ModEntry.AssetPrefix + "Assets", "Sprites");
-		internal static readonly string LocalTexturePath = Path.Combine("assets", "sprites");
+		internal static readonly string GameContentDataPath = Path.Combine("Mods", ModEntry.AssetPrefix + "Assets", "Data");
+		internal static readonly string GameContentMenuTexturePath = Path.Combine("Mods", ModEntry.AssetPrefix + "Assets", "Menu");
+		internal static readonly string GameContentCardTexturePath = Path.Combine("Mods", ModEntry.AssetPrefix + "Assets", "Card");
+
+		internal static readonly string LocalDataPath = Path.Combine("assets", "data");
+		internal static readonly string LocalMenuTexturePath = Path.Combine("assets", "menu-{0}");
+		internal static readonly string LocalCardTexturePath = Path.Combine("assets", "card");
+
 		internal static readonly string ContentPackPath = Path.Combine("assets", "ContentPack");
+
 		internal const int GiftWrapFriendshipBoost = 25;
+
 		internal enum GiftType
 		{
 			BedFurniture,
@@ -53,6 +61,13 @@ namespace GiftWrapper
 		{
 			ModEntry.Instance = this;
 			ModEntry.Config = this.Helper.ReadConfig<Config>();
+
+			if (!Enum.IsDefined(typeof(Config.Themes), ModEntry.Config.Theme))
+			{
+				// Pick random theme if theme not picked or defined
+				List<Config.Themes> themes = Enum.GetValues(typeof(Config.Themes)).Cast<Config.Themes>().ToList();
+				ModEntry.Config.Theme = themes[Game1.random.Next(themes.Count)];
+			}
 
 			this.Helper.Events.GameLoop.GameLaunched += this.OnGameLaunched;
 		}
@@ -80,16 +95,41 @@ namespace GiftWrapper
 			if (api is null)
 				return;
 
+			Dictionary<Config.Themes, Translation> themes = Enum
+				.GetValues(typeof(Config.Themes))
+				.Cast<Config.Themes>()
+				.ToDictionary(
+					value => value,
+					value => ModEntry.I18n.Get("config.theme." + (int)value));
+
 			api.Register(
 				mod: this.ModManifest,
 				reset: () => ModEntry.Config = new Config(),
 				save: () => this.Helper.WriteConfig(ModEntry.Config));
+
+			// Themes
+			api.AddTextOption(
+				mod: this.ModManifest,
+				name: () => ModEntry.I18n.Get("config.theme.name"),
+				tooltip: () => ModEntry.I18n.Get("config.theme.description"),
+				getValue: () => themes[ModEntry.Config.Theme],
+				setValue: (string theme) =>
+				{
+					ModEntry.Config.Theme = (Config.Themes)Enum.Parse(typeof(Config.Themes), theme);
+					ModEntry.Instance.Helper.GameContent.InvalidateCache(ModEntry.GameContentMenuTexturePath);
+				},
+				allowedValues: themes.Keys.Select((Config.Themes key) => key.ToString()).ToArray(),
+				formatAllowedValue: (string theme) => themes[(Config.Themes)Enum.Parse(typeof(Config.Themes), theme)]);
+
+			// Availability
 			api.AddBoolOption(
 				mod: this.ModManifest,
 				name: () => ModEntry.I18n.Get("config.availableallyear.name"),
 				tooltip: () => ModEntry.I18n.Get("config.availableallyear.description"),
 				getValue: () => ModEntry.Config.AvailableAllYear,
 				setValue: (bool value) => ModEntry.Config.AvailableAllYear = value);
+
+			// Mouse buttons
 			api.AddBoolOption(
 				mod: this.ModManifest,
 				name: () => ModEntry.I18n.Get("config.invertmousebuttons.name"),
@@ -119,7 +159,7 @@ namespace GiftWrapper
 			if (e.NewMenu is ShopMenu shop && shop.portraitPerson?.Name == "Pierre" && (ModEntry.Config.AvailableAllYear || isWinterStarPeriod))
 			{
 				// Gift wrap is purchaseable from Pierre throughout the Secret Friend gifting event
-				int id = ModEntry.JsonAssets.GetObjectId(ModEntry.AssetPrefix + ModEntry.GiftWrapName);
+				int id = ModEntry.JsonAssets.GetObjectId(ModEntry.ItemPrefix + ModEntry.GiftWrapName);
 				Object o = new(parentSheetIndex: id, initialStack: 1);
 				float price = o.Price * Game1.MasterPlayer.difficultyModifier;
 				if (Game1.dayOfMonth > 25)
@@ -201,7 +241,7 @@ namespace GiftWrapper
 					// Open the gift wrap menu from placed gift wrap when left-clicking
 					if (ModEntry.IsInteractButton(e.Button))
 					{
-						Game1.activeClickableMenu = new GiftWrapMenu(e.Cursor.GrabTile);
+						Game1.activeClickableMenu = new GiftWrapMenu(tile: e.Cursor.GrabTile);
 					}
 					else if (ModEntry.IsPlacementButton(e.Button))
 					{
@@ -335,14 +375,19 @@ namespace GiftWrapper
 			}
 		}
 
+		internal static string GetThemedTexturePath()
+		{
+			return string.Format(ModEntry.LocalMenuTexturePath, ModEntry.Config.Theme);
+		}
+
 		public static bool IsGiftWrap(Item item)
 		{
-			return item?.Name == ModEntry.AssetPrefix + ModEntry.GiftWrapName;
+			return item?.Name == ModEntry.ItemPrefix + ModEntry.GiftWrapName;
 		}
 
 		public static bool IsWrappedGift(Item item)
 		{
-			return item?.Name == ModEntry.AssetPrefix + ModEntry.WrappedGiftName;
+			return item?.Name == ModEntry.ItemPrefix + ModEntry.WrappedGiftName;
 		}
 
 		public static bool IsInteractButton(SButton button)
@@ -360,7 +405,7 @@ namespace GiftWrapper
 		public static Object GetWrappedGift(ModDataDictionary modData)
 		{
 			// Object-based solution for wrapped gifts:
-			Object wrappedGift = new(parentSheetIndex: ModEntry.JsonAssets.GetObjectId(ModEntry.AssetPrefix + ModEntry.WrappedGiftName), initialStack: 1)
+			Object wrappedGift = new(parentSheetIndex: ModEntry.JsonAssets.GetObjectId(ModEntry.ItemPrefix + ModEntry.WrappedGiftName), initialStack: 1)
 			{
 				// Tackle category: Cannot be stacked higher than 1, which solves the issue of modData folding.
 				// The unfortunate side-effect is that they can, however, be attached to rods. We'll sort this out in ButtonPressed.
@@ -385,7 +430,7 @@ namespace GiftWrapper
 				return false;
 			}
 
-			Object placedGift = new(parentSheetIndex: ModEntry.JsonAssets.GetObjectId(ModEntry.AssetPrefix + ModEntry.WrappedGiftName), initialStack: 1);
+			Object placedGift = new(parentSheetIndex: ModEntry.JsonAssets.GetObjectId(ModEntry.ItemPrefix + ModEntry.WrappedGiftName), initialStack: 1);
 			if (wrappedGift.modData is not null)
 			{
 				placedGift.modData = wrappedGift.modData;
@@ -412,6 +457,7 @@ namespace GiftWrapper
 					// Avoid adding items with undefined behaviour
 					Game1.showRedMessage(ModEntry.I18n.Get("error.wrapping", new { ItemName = wrappedGift.DisplayName }));
 					wrappedGift = null;
+					return;
 				}
 
 				// Define all the data to be serialised into the wrapped gift's modData
@@ -461,17 +507,17 @@ namespace GiftWrapper
 				if (Game1.currentLocation.Objects.Remove(placedGiftWrapPosition))
 				{
 					// Add all fields into wrapped gift's modData
-					wrappedGift.modData[ModEntry.AssetPrefix + "giftsender"] = giftSender.ToString();
-					wrappedGift.modData[ModEntry.AssetPrefix + "giftname"] = giftName;
-					wrappedGift.modData[ModEntry.AssetPrefix + "giftid"] = giftId.ToString();
-					wrappedGift.modData[ModEntry.AssetPrefix + "giftparentid"] = giftParentId.ToString();
-					wrappedGift.modData[ModEntry.AssetPrefix + "gifttype"] = giftType.ToString();
-					wrappedGift.modData[ModEntry.AssetPrefix + "giftstack"] = giftStack.ToString();
-					wrappedGift.modData[ModEntry.AssetPrefix + "giftquality"] = giftQuality.ToString();
-					wrappedGift.modData[ModEntry.AssetPrefix + "giftpreserve"] = giftPreserve.ToString();
-					wrappedGift.modData[ModEntry.AssetPrefix + "gifthoney"] = giftHoney.ToString();
-					wrappedGift.modData[ModEntry.AssetPrefix + "giftcolour"] = giftColour;
-					wrappedGift.modData[ModEntry.AssetPrefix + "giftdata"] = giftDataSerialised;
+					wrappedGift.modData[ModEntry.ItemPrefix + "giftsender"] = giftSender.ToString();
+					wrappedGift.modData[ModEntry.ItemPrefix + "giftname"] = giftName;
+					wrappedGift.modData[ModEntry.ItemPrefix + "giftid"] = giftId.ToString();
+					wrappedGift.modData[ModEntry.ItemPrefix + "giftparentid"] = giftParentId.ToString();
+					wrappedGift.modData[ModEntry.ItemPrefix + "gifttype"] = giftType.ToString();
+					wrappedGift.modData[ModEntry.ItemPrefix + "giftstack"] = giftStack.ToString();
+					wrappedGift.modData[ModEntry.ItemPrefix + "giftquality"] = giftQuality.ToString();
+					wrappedGift.modData[ModEntry.ItemPrefix + "giftpreserve"] = giftPreserve.ToString();
+					wrappedGift.modData[ModEntry.ItemPrefix + "gifthoney"] = giftHoney.ToString();
+					wrappedGift.modData[ModEntry.ItemPrefix + "giftcolour"] = giftColour;
+					wrappedGift.modData[ModEntry.ItemPrefix + "giftdata"] = giftDataSerialised;
 
 					if (showMessage)
 					{
@@ -493,7 +539,7 @@ namespace GiftWrapper
 				"giftparentid", "gifttype", "giftstack", 
 				"giftquality", "giftpreserve", "gifthoney",
 				"giftcolour", "giftdata" };
-			if (fields.Any((string field) => !modData.ContainsKey(ModEntry.AssetPrefix + field)))
+			if (fields.Any((string field) => !modData.ContainsKey(ModEntry.ItemPrefix + field)))
 			{
 				string msg = fields.Where((string field) => !modData.ContainsKey(field))
 					.Aggregate("This gift is missing data:", (string str, string field) => $"{str}\n{field}")
@@ -504,17 +550,17 @@ namespace GiftWrapper
 			}
 
 			// Parse the wrapped gift's serialised modData fields to use in rebuilding its gift item
-			long giftSender = long.Parse(modData[ModEntry.AssetPrefix + fields[0]]);
-			string giftName = modData[ModEntry.AssetPrefix + fields[1]];
-			int giftId = int.Parse(modData[ModEntry.AssetPrefix + fields[2]]);
-			int giftParentId = int.Parse(modData[ModEntry.AssetPrefix + fields[3]]);
-			int giftType = int.Parse(modData[ModEntry.AssetPrefix + fields[4]]);
-			int giftStack = int.Parse(modData[ModEntry.AssetPrefix + fields[5]]);
-			int giftQuality = int.Parse(modData[ModEntry.AssetPrefix + fields[6]]);
-			int giftPreserve = int.Parse(modData[ModEntry.AssetPrefix + fields[7]]);
-			int giftHoney = int.Parse(modData[ModEntry.AssetPrefix + fields[8]]);
-			string giftColour = modData[ModEntry.AssetPrefix + fields[9]];
-			string giftData = modData[ModEntry.AssetPrefix + fields[10]];
+			long giftSender = long.Parse(modData[ModEntry.ItemPrefix + fields[0]]);
+			string giftName = modData[ModEntry.ItemPrefix + fields[1]];
+			int giftId = int.Parse(modData[ModEntry.ItemPrefix + fields[2]]);
+			int giftParentId = int.Parse(modData[ModEntry.ItemPrefix + fields[3]]);
+			int giftType = int.Parse(modData[ModEntry.ItemPrefix + fields[4]]);
+			int giftStack = int.Parse(modData[ModEntry.ItemPrefix + fields[5]]);
+			int giftQuality = int.Parse(modData[ModEntry.ItemPrefix + fields[6]]);
+			int giftPreserve = int.Parse(modData[ModEntry.ItemPrefix + fields[7]]);
+			int giftHoney = int.Parse(modData[ModEntry.ItemPrefix + fields[8]]);
+			string giftColour = modData[ModEntry.ItemPrefix + fields[9]];
+			string giftData = modData[ModEntry.ItemPrefix + fields[10]];
 			Item actualGift = null;
 			switch (giftType)
 			{
@@ -578,7 +624,7 @@ namespace GiftWrapper
 			{
 				// Show a message to all players to celebrate this wonderful event
 				Multiplayer multiplayer = ModEntry.Instance.Helper.Reflection.GetField<Multiplayer>(typeof(Game1), "multiplayer").GetValue();
-				multiplayer.globalChatInfoMessage(ModEntry.AssetPrefix + (giftStack > 1 ? "message.giftopened_quantity" : "message.giftopened"),
+				multiplayer.globalChatInfoMessage(ModEntry.ItemPrefix + (giftStack > 1 ? "message.giftopened_quantity" : "message.giftopened"),
 					recipientName, // Recipient's name
 					Game1.getFarmer(giftSender).Name, // Sender's name
 					actualGift.DisplayName, // Gift name

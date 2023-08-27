@@ -10,9 +10,17 @@ namespace GiftWrapper
 	{
 		public static void OnAssetRequested(object sender, AssetRequestedEventArgs e)
 		{
-			if (e.NameWithoutLocale.IsEquivalentTo(ModEntry.GameContentTexturePath))
+			if (e.NameWithoutLocale.IsEquivalentTo(ModEntry.GameContentDataPath))
 			{
-				e.LoadFromModFile<Texture2D>(relativePath: $"{ModEntry.LocalTexturePath}.png", priority: AssetLoadPriority.Medium);
+				e.LoadFromModFile<Data.Data>(relativePath: $"{ModEntry.LocalDataPath}.json", priority: AssetLoadPriority.Medium);
+			}
+			else if (e.NameWithoutLocale.IsEquivalentTo(ModEntry.GameContentMenuTexturePath))
+			{
+				e.LoadFromModFile<Texture2D>(relativePath: $"{ModEntry.GetThemedTexturePath()}.png", priority: AssetLoadPriority.Medium);
+			}
+			else if (e.NameWithoutLocale.IsEquivalentTo(ModEntry.GameContentCardTexturePath))
+			{
+				e.LoadFromModFile<Texture2D>(relativePath: $"{ModEntry.LocalCardTexturePath}.png", priority: AssetLoadPriority.Medium);
 			}
 			else if (e.NameWithoutLocale.IsEquivalentTo(@"Data/ObjectInformation"))
 			{
@@ -36,7 +44,7 @@ namespace GiftWrapper
 			var data = asset.AsDictionary<int, string>().Data;
 
 			// Add localised names and descriptions for new objects
-			foreach (var pair in data.Where(pair => pair.Value.Split('/') is string[] split && split[0].StartsWith(ModEntry.AssetPrefix)).ToList())
+			foreach (var pair in data.Where(pair => pair.Value.Split('/') is string[] split && split[0].StartsWith(ModEntry.ItemPrefix)).ToList())
 			{
 				string[] fields = pair.Value.Split('/');
 				string name = fields[0].Split(separator: new[] { '.' }, count: 3)[2];
@@ -56,7 +64,7 @@ namespace GiftWrapper
 			// Format message tokens so that they can be later tokenised by the game in multiplayer.globalChatInfoMessage()
 			foreach (string key in new [] { "message.giftopened", "message.giftopened.quantity" })
 			{
-				data.Add($"Chat_{ModEntry.AssetPrefix}{key}",
+				data.Add($"Chat_{ModEntry.ItemPrefix}{key}",
 					ModEntry.I18n.Get(key, new
 					{
 						Recipient = "{0}",

@@ -1,0 +1,225 @@
+{
+	"UI": {
+		"Scale": 4,
+		
+		// Cues
+		
+		"OpenSound": "newRecipe",
+		"SuccessSound": "give_gift",
+		"FailureSound": "cancel",
+		"ItemSound": "coin",
+		"ItemSounds": {
+			"Weeds": "sheep",
+			"Tea Set": "button1",
+			"Lucky Purple Shorts": "fishSlap",
+			"Trimmed Lucky Purple Shorts": "yoba",
+			"Prismatic Shard": "yoba",
+			"Golden Coconut": "yoba",
+			"Golden Pumpkin": "yoba",
+			"Galaxy Soul": "shadowpeep"
+		},
+		"CategorySounds": {
+			"sandyStep": [
+				-20, // Junk
+				-95, // Hat
+				-97, // Boots
+				-100 // Clothing
+			],
+			"Ship": [
+				-9, // BigCraftable
+				-24 // Furniture
+			],
+			"parry": [
+				-98, // Weapon
+				-99 // Tool
+			],
+			"leafrustle": [
+				-80, // Flowers
+				-81 // Greens
+			],
+			"harvest": [
+				-25, // Ingredients
+				-74, // Seeds
+				-75, // Vegetable
+				-79 // Fruits
+			],
+			"stoneStep": [
+				-8, // Crafting
+				-12, // Minerals
+				-22, // Tackle
+				-29, // Equipment
+				-96 // Ring
+			],
+			"tinyWhip": [
+				-2, // Gem
+				-5, // Egg
+				-6, // Milk
+				-7, // Cooking
+				-26, // ArtisanGoods
+				-27 // Syrup
+			],
+			"slimeHit": [
+				-4, // Fish
+				-14, // Meat
+				-19, // Fertiliser
+				-21, // Bait
+				-28 // MonsterLoot
+			]
+		},
+		"ShakeCategories": [
+			-9, // BigCraftable
+			-24, // Furniture
+			-98, // Weapon
+			-99 // Tool
+		],
+		
+		// Strings
+		
+		"InfoTextPath": null,
+		"InfoTextKey": null,
+		
+		// Animations
+		
+		"ShortShakeDuration": 400,
+		"LongShakeDuration": 200,
+		"WrapButtonFrames": 4,
+		"WrapButtonFrameTime": 100,
+		
+		// Regions
+		
+		"SceneBackgroundSource": {
+			"X": 0,
+			"Y": 0,
+			"Width": 128,
+			"Height": 80
+		},
+		"InfoBackgroundSource": {
+			"X": 84,
+			"Y": 80,
+			"Width": 20,
+			"Height": 20
+		},
+		"InventorySlotSource": {
+			"X": 32,
+			"Y": 152,
+			"Width": 16,
+			"Height": 16
+		},
+		"ItemSlotSource": {
+			"X": 104,
+			"Y": 80,
+			"Width": 24,
+			"Height": 24
+		},
+		"WrapButtonSource": {
+			"X": 548,
+			"Y": 262,
+			"Width": 18,
+			"Height": 20
+		},
+		"Decorations": [
+			// Box
+			{
+				"Position": {
+					"X": 36,
+					"Y": 42
+				},
+				"Source": {
+					"X": 0,
+					"Y": 80,
+					"Width": 64,
+					"Height": 48
+				}
+			},
+			// Spangle
+			{
+				"Position": {
+					"X": 4,
+					"Y": 4
+				},
+				"Source": {
+					"X": 0,
+					"Y": 128,
+					"Width": 32,
+					"Height": 32
+				}
+			},
+			// Brumble
+			{
+				"Position": {
+					"X": 126,
+					"Y": 76
+				},
+				"Source": {
+					"X": 32,
+					"Y": 128,
+					"Width": 32,
+					"Height": 24
+				}
+			},
+			// Scissors
+			{
+				"Position": {
+					"X": 218,
+					"Y": 106
+				},
+				"Source": {
+					"X": 64,
+					"Y": 104,
+					"Width": 64,
+					"Height": 76
+				}
+			},
+			// Tape
+			{
+				"Position": {
+					"X": 4,
+					"Y": 144
+				},
+				"Source": {
+					"X": 0,
+					"Y": 160,
+					"Width": 32,
+					"Height": 20
+				}
+			}
+		],
+		
+		// Assets
+		
+		"MenuSpriteSheetPath": "Mods/blueberry.GiftWrapper.Assets/Menu",
+		"CardSpriteSheetPath": "Mods/blueberry.GiftWrapper.Assets/Card",
+		"WrapButtonSpriteSheetPath": "LooseSprites/JunimoNote",
+		
+		// Dimensions
+		
+		"BorderSourceAt": {
+			"X": 64,
+			"Y": 80
+		},
+		"BorderSize": {
+			"X": 9,
+			"Y": 8
+		},
+		"BorderOffset": {
+			"X": 1,
+			"Y": 1
+		},
+		"CardOffset": {
+			"X": 40,
+			"Y": 34
+		},
+		"InfoTextMargin": {
+			"X": 4,
+			"Y": 4
+		},
+		"InventoryMargin": {
+			"X": 6,
+			"Y": 4
+		},
+		
+		// Sizes
+		
+		"InfoBackgroundWidth": 74
+	}
+}
