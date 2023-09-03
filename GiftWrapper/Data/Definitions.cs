@@ -2,7 +2,7 @@
 
 namespace GiftWrapper.Data
 {
-	public class Definitions
+	public record Definitions
 	{
 		public float AddedFriendship;
 		public int GiftValue;

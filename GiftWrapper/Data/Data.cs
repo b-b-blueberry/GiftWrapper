@@ -5,7 +5,7 @@ namespace GiftWrapper.Data
 	/// <summary>
 	/// Model for mod feature data.
 	/// </summary>
-	public class Data
+	public record Data
 	{
 		/// <summary>
 		/// Map of audio cue IDs to asset paths.

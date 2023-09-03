@@ -5,7 +5,7 @@ using Colour = Microsoft.Xna.Framework.Color;
 
 namespace GiftWrapper.Data
 {
-	public class UI
+	public record UI
 	{
 		/// <summary>
 		/// Scale of UI components.

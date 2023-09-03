@@ -1,6 +1,6 @@
 ﻿namespace GiftWrapper.Data
 {
-	public class Shop
+	public record Shop
 	{
 		/// <summary>
 		/// Name of shop context or portrait NPC, prioritised respectively,

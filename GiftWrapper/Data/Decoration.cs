@@ -2,7 +2,7 @@
 
 namespace GiftWrapper.Data
 {
-	public class Decoration
+	public record Decoration
 	{
 		public Point Position;
 		public Rectangle Source;
