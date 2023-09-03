@@ -838,7 +838,7 @@ namespace GiftWrapper
 				b.Draw(
 					texture: this._menuTexture,
 					position: position,
-					sourceRectangle: this.UI.InventorySlotSource,
+					sourceRectangle: i < Game1.player.maxItems.Value ? this.UI.InventorySlotSource : this.UI.InventoryLockedSlotSource,
 					color: Colour.White,
 					rotation: 0,
 					origin: Vector2.Zero,

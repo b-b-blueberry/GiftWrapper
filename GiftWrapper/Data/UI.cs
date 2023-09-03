@@ -54,6 +54,13 @@ namespace GiftWrapper.Data
 		/// </summary>
 		public string InfoTextKey;
 
+		// Colours
+
+		/// <summary>
+		/// Colour set on items in inventory not allowed to be wrapped as gifts.
+		/// </summary>
+		public Colour InventoryInvalidGiftColour;
+
 		// Animations
 
 		/// <summary>
@@ -87,6 +94,10 @@ namespace GiftWrapper.Data
 		/// Region of texture asset used when drawing component sprite.
 		/// </summary>
 		public Rectangle InventorySlotSource;
+		/// <summary>
+		/// Region of texture asset used when drawing component sprite.
+		/// </summary>
+		public Rectangle InventoryLockedSlotSource;
 		/// <summary>
 		/// Region of texture asset used when drawing component sprite.
 		/// </summary>
