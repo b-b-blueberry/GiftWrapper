@@ -20,6 +20,10 @@ namespace GiftWrapper.Data
 		/// </summary>
 		public Shop[] Shops;
 		/// <summary>
+		/// Map of models for visual styles of wrapped gift items.
+		/// </summary>
+		public Dictionary<string, Style> Styles;
+		/// <summary>
 		/// Model for UI data, used for theme definitions.
 		/// </summary>
 		public UI UI;

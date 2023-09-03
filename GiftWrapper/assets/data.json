@@ -1,14 +1,50 @@
 {
     "Audio": {
+        "Mods.blueberry.GiftWrapper.Paper": [
+            "paper-1",
+            "paper-2",
+            "paper-3"
+        ],
+        "Mods.blueberry.GiftWrapper.TearPaper": [
+            "paper-torn-1",
+            "paper-torn-2",
+            "paper-torn-3"
+        ],
+        "Mods.blueberry.GiftWrapper.Box": [
+            "box-1",
+            "box-2"
+        ],
         "Mods.blueberry.GiftWrapper.None": [
             "none"
         ]
     },
     "Definitions": {
         "AddedFriendship": 1.1,
+        "GiftValue": 60,
+        "HitCount": [
+            3,
+            5
+        ],
+        "HitShake": 300,
+        "HitSound": "Mods.blueberry.GiftWrapper.TearPaper",
+        "LastHitSound": "Mods.blueberry.GiftWrapper.Box",
+        "OpenSound": "newRecord",
         "InvalidGiftStringPath": "Strings\\StringsFromCSFiles:Event.cs.1803",
         "InvalidGiftSound": "cancel",
-        "EventConditionId": -4721
+        "EventConditionId": -4721,
+        "CategoryNumber": -4721,
+        "CategoryTextColour": {
+            "R": 120,
+            "G": 0,
+            "B": 210,
+            "A": 255
+        },
+        "SecretTextColour": {
+            "R": 120,
+            "G": 0,
+            "B": 210,
+            "A": 230
+        }
     },
     "Shops": [
         {
@@ -46,88 +82,238 @@
             "IfAlwaysAvailable": true
         }
     ],
+    "Styles": {
+        "blueberry.gw.peach": {
+            "Texture": null,
+            "Area": {
+                "X": 0,
+                "Y": 0,
+                "Width": 16,
+                "Height": 18
+            }
+        },
+        "blueberry.gw.blue": {
+            "Texture": null,
+            "Area": {
+                "X": 16,
+                "Y": 0,
+                "Width": 16,
+                "Height": 18
+            }
+        },
+        "blueberry.gw.pink": {
+            "Texture": null,
+            "Area": {
+                "X": 32,
+                "Y": 0,
+                "Width": 16,
+                "Height": 18
+            }
+        },
+        "blueberry.gw.red": {
+            "Texture": null,
+            "Area": {
+                "X": 48,
+                "Y": 0,
+                "Width": 16,
+                "Height": 18
+            }
+        },
+        "blueberry.gw.confetti": {
+            "Texture": null,
+            "Area": {
+                "X": 64,
+                "Y": 0,
+                "Width": 16,
+                "Height": 18
+            }
+        },
+        "blueberry.gw.banana": {
+            "Texture": null,
+            "Area": {
+                "X": 80,
+                "Y": 0,
+                "Width": 16,
+                "Height": 18
+            }
+        },
+        "blueberry.gw.paper": {
+            "Texture": null,
+            "Area": {
+                "X": 96,
+                "Y": 0,
+                "Width": 16,
+                "Height": 18
+            }
+        },
+        "blueberry.gw.cardboard": {
+            "Texture": null,
+            "Area": {
+                "X": 112,
+                "Y": 0,
+                "Width": 16,
+                "Height": 18
+            }
+        },
+        "blueberry.gw.chest": {
+            "Texture": null,
+            "Area": {
+                "X": 0,
+                "Y": 18,
+                "Width": 16,
+                "Height": 18
+            },
+            "HitSound": "woodWhack",
+            "LastHitSound": "barrelBreak",
+            "OpenSound": "newRecord"
+        },
+        "blueberry.gw.peppermint": {
+            "Texture": null,
+            "Area": {
+                "X": 16,
+                "Y": 18,
+                "Width": 16,
+                "Height": 18
+            }
+        },
+        "blueberry.gw.royal": {
+            "Texture": null,
+            "Area": {
+                "X": 32,
+                "Y": 18,
+                "Width": 16,
+                "Height": 18
+            }
+        },
+        "blueberry.gw.flat": {
+            "Texture": null,
+            "Area": {
+                "X": 48,
+                "Y": 18,
+                "Width": 16,
+                "Height": 18
+            }
+        },
+        "blueberry.gw.tower": {
+            "Texture": null,
+            "Area": {
+                "X": 64,
+                "Y": 18,
+                "Width": 16,
+                "Height": 18
+            }
+        },
+        "blueberry.gw.zigzag": {
+            "Texture": null,
+            "Area": {
+                "X": 80,
+                "Y": 18,
+                "Width": 16,
+                "Height": 18
+            }
+        },
+        "blueberry.gw.round": {
+            "Texture": null,
+            "Area": {
+                "X": 96,
+                "Y": 18,
+                "Width": 16,
+                "Height": 18
+            }
+        },
+        "blueberry.gw.dotty": {
+            "Texture": null,
+            "Area": {
+                "X": 112,
+                "Y": 18,
+                "Width": 16,
+                "Height": 18
+            }
+        }
+    },
 	"UI": {
 		"Scale": 4,
 		
 		// Cues
 		
-		"OpenSound": "newRecipe",
         "NoSound": "Mods.blueberry.GiftWrapper.None",
-		"SuccessSound": "give_gift",
-		"FailureSound": "cancel",
-		"ItemSound": "coin",
-		"ItemSounds": {
-			"Weeds": "sheep",
-			"Tea Set": "button1",
-			"Lucky Purple Shorts": "fishSlap",
-			"Trimmed Lucky Purple Shorts": "yoba",
-			"Prismatic Shard": "yoba",
-			"Golden Coconut": "yoba",
-			"Golden Pumpkin": "yoba",
-			"Galaxy Soul": "shadowpeep"
-		},
-		"CategorySounds": {
-			"sandyStep": [
-				-20, // Junk
-				-95, // Hat
-				-97, // Boots
-				-100 // Clothing
-			],
-			"Ship": [
-				-9, // BigCraftable
-				-24 // Furniture
-			],
-			"parry": [
-				-98, // Weapon
-				-99 // Tool
-			],
-			"leafrustle": [
-				-80, // Flowers
-				-81 // Greens
-			],
-			"harvest": [
-				-25, // Ingredients
-				-74, // Seeds
-				-75, // Vegetable
-				-79 // Fruits
-			],
-			"stoneStep": [
-				-8, // Crafting
-				-12, // Minerals
-				-22, // Tackle
-				-29, // Equipment
-				-96 // Ring
-			],
-			"tinyWhip": [
-				-2, // Gem
-				-5, // Egg
-				-6, // Milk
-				-7, // Cooking
-				-26, // ArtisanGoods
-				-27 // Syrup
-			],
-			"slimeHit": [
-				-4, // Fish
-				-14, // Meat
-				-19, // Fertiliser
-				-21, // Bait
-				-28 // MonsterLoot
-			]
-		},
-		"ShakeCategories": [
-			-9, // BigCraftable
-			-24, // Furniture
-			-98, // Weapon
-			-99 // Tool
-		],
-		
-		// Strings
-		
-		"InfoTextPath": null,
-		"InfoTextKey": null,
-		
-		// Colours
-		
+        "OpenSound": "newRecipe",
+        "SuccessSound": "give_gift",
+        "FailureSound": "cancel",
+        "StyleSound": "newRecipe",
+        "ItemSound": "coin",
+        "ItemSounds": {
+            "Weeds": "sheep",
+            "Tea Set": "button1",
+            "Lucky Purple Shorts": "fishSlap",
+            "Trimmed Lucky Purple Shorts": "yoba",
+            "Prismatic Shard": "yoba",
+            "Golden Coconut": "yoba",
+            "Golden Pumpkin": "yoba",
+            "Galaxy Soul": "shadowpeep"
+        },
+        "CategorySounds": {
+            "sandyStep": [
+                -20, // Junk
+                -95, // Hat
+                -97, // Boots
+                -100 // Clothing
+            ],
+            "Ship": [
+                -9, // BigCraftable
+                -24 // Furniture
+            ],
+            "parry": [
+                -98, // Weapon
+                -99 // Tool
+            ],
+            "leafrustle": [
+                -80, // Flowers
+                -81 // Greens
+            ],
+            "harvest": [
+                -25, // Ingredients
+                -74, // Seeds
+                -75, // Vegetable
+                -79 // Fruits
+            ],
+            "stoneStep": [
+                -8, // Crafting
+                -12, // Minerals
+                -22, // Tackle
+                -29, // Equipment
+                -96 // Ring
+            ],
+            "tinyWhip": [
+                -2, // Gem
+                -5, // Egg
+                -6, // Milk
+                -7, // Cooking
+                -26, // ArtisanGoods
+                -27 // Syrup
+            ],
+            "slimeHit": [
+                -4, // Fish
+                -14, // Meat
+                -19, // Fertiliser
+                -21, // Bait
+                -28 // MonsterLoot
+            ]
+        },
+        "ShakeCategories": [
+            -9, // BigCraftable
+            -24, // Furniture
+            -98, // Weapon
+            -99 // Tool
+        ],
+
+        // Strings
+
+        "InfoTextPath": null,
+        "InfoTextKey": null,
+
+        // Colours
+
         "InventoryInvalidGiftColour": {
             "R": 35,
             "G": 25,

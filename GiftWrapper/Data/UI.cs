@@ -31,6 +31,10 @@ namespace GiftWrapper.Data
 		/// </summary>
 		public string FailureSound;
 		/// <summary>
+		/// Sound cue played on style interactions.
+		/// </summary>
+		public string StyleSound;
+		/// <summary>
 		/// Sound cue played on item interactions.
 		/// </summary>
 		public string ItemSound;

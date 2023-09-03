@@ -2,16 +2,12 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using SpaceCore.Events;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
 using StardewValley.Locations;
 using StardewValley.Menus;
-using StardewValley.Objects;
-using StardewValley.Tools;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -29,6 +25,7 @@ namespace GiftWrapper
 		internal static ITranslationHelper I18n => ModEntry.Instance.Helper.Translation;
 		internal static IJsonAssetsAPI JsonAssets;
 
+		internal static Dictionary<string, Lazy<Texture2D>> GiftSprites { get; private set; }
 
 		public const string AssetPrefix = "blueberry.GiftWrapper.";
 		public const string ItemPrefix = "blueberry.gw.";
@@ -36,10 +33,12 @@ namespace GiftWrapper
 		public const string WrappedGiftName = "wrappedgift";
 
 		internal static readonly string GameContentDataPath = Path.Combine("Mods", ModEntry.AssetPrefix + "Assets", "Data");
+		internal static readonly string GameContentGiftTexturePath = Path.Combine("Mods", ModEntry.AssetPrefix + "Assets", "Gifts");
 		internal static readonly string GameContentMenuTexturePath = Path.Combine("Mods", ModEntry.AssetPrefix + "Assets", "Menu");
 		internal static readonly string GameContentCardTexturePath = Path.Combine("Mods", ModEntry.AssetPrefix + "Assets", "Card");
 
 		internal static readonly string LocalDataPath = Path.Combine("assets", "data");
+		internal static readonly string LocalGiftTexturePath = Path.Combine("assets", "gifts");
 		internal static readonly string LocalMenuTexturePath = Path.Combine("assets", "menu-{0}");
 		internal static readonly string LocalCardTexturePath = Path.Combine("assets", "card");
 
@@ -77,6 +76,20 @@ namespace GiftWrapper
 
 		private bool TryLoadApis()
 		{
+			// SpaceCore setup
+			try
+			{
+				ISpaceCoreAPI spacecoreApi = this.Helper.ModRegistry
+					.GetApi<ISpaceCoreAPI>
+					("spacechase0.SpaceCore");
+				spacecoreApi.RegisterSerializerType(typeof(GiftItem));
+			}
+			catch (Exception e)
+			{
+				this.Monitor.Log($"Failed to register objects with SpaceCore.{Environment.NewLine}{e}", LogLevel.Error);
+				return false;
+			}
+
 			// Add Json Assets items
 			ModEntry.JsonAssets = this.Helper.ModRegistry.GetApi<IJsonAssetsAPI>("spacechase0.JsonAssets");
 			if (ModEntry.JsonAssets is null)
@@ -131,6 +144,33 @@ namespace GiftWrapper
 				tooltip: () => ModEntry.I18n.Get("config.availableallyear.description"),
 				getValue: () => ModEntry.Config.AlwaysAvailable,
 				setValue: (bool value) => ModEntry.Config.AlwaysAvailable = value);
+
+			// Tooltip enabled
+			api.AddBoolOption(
+				mod: this.ModManifest,
+				name: () => ModEntry.I18n.Get("config.giftpreviewtileenabled.name"),
+				tooltip: () => ModEntry.I18n.Get("config.giftpreviewtileenabled.description"),
+				getValue: () => ModEntry.Config.GiftPreviewEnabled,
+				setValue: (bool value) => ModEntry.Config.GiftPreviewEnabled = value);
+
+			// Tooltip range
+			api.AddNumberOption(
+				mod: this.ModManifest,
+				name: () => ModEntry.I18n.Get("config.giftpreviewtilerange.name"),
+				tooltip: () => ModEntry.I18n.Get("config.giftpreviewtilerange.description"),
+				getValue: () => ModEntry.Config.GiftPreviewTileRange,
+				setValue: (int value) => ModEntry.Config.GiftPreviewTileRange = value);
+
+			// Tooltip fade
+			api.AddNumberOption(
+				mod: this.ModManifest,
+				name: () => ModEntry.I18n.Get("config.giftpreviewfadespeed.name"),
+				tooltip: () => ModEntry.I18n.Get("config.giftpreviewfadespeed.description"),
+				getValue: () => ModEntry.Config.GiftPreviewFadeSpeed,
+				setValue: (int value) => ModEntry.Config.GiftPreviewFadeSpeed = value,
+				min: 1,
+				max: 20,
+				interval: 1);
 		}
 
 		private void OnGameLaunched(object sender, GameLaunchedEventArgs e)
@@ -149,6 +189,14 @@ namespace GiftWrapper
 
 			// Gift data
 			Data.Data data = this.Helper.GameContent.Load<Data.Data>(ModEntry.GameContentDataPath);
+			GiftItem.ReloadDefinitions(data.Definitions);
+			ModEntry.GiftSprites = data.Styles.Values
+				.Select((Style style) => style.Texture ?? ModEntry.GameContentGiftTexturePath)
+				.Distinct()
+				.ToList()
+				.ToDictionary(
+					(string path) => path,
+					(string path) => new Lazy<Texture2D>(() => ModEntry.Instance.Helper.GameContent.Load<Texture2D>(path)));
 
 			// Audio
 			foreach (string id in data.Audio.Keys)
@@ -185,46 +233,26 @@ namespace GiftWrapper
 			}
 		}
 
+		/// <summary>
+		/// Interactions for wrapping paper item.
+		/// </summary>
 		private void OnButtonPressed(object sender, ButtonPressedEventArgs e)
 		{
-			if (!Context.CanPlayerMove)
-				return;
-
-			// Menu interactions
-			if (Game1.activeClickableMenu is GameMenu gameMenu
-				&& gameMenu.GetCurrentPage() is InventoryPage inventoryPage
-				&& e.Button.IsActionButton())
-			{
-				Item hoverItem = inventoryPage.inventory.hover(
-					x: Game1.getOldMouseX(),
-					y: Game1.getOldMouseY(),
-					heldItem: Game1.player.CursorSlotItem);
-				if (ModEntry.IsWrappedGift(Game1.player.CursorSlotItem)
-					&& Game1.player.CursorSlotItem.Category == -22
-					&& hoverItem is not null
-					&& hoverItem is FishingRod)
-				{
-					// Prevent tackle-method wrapped gifts from being attached to fishing rods with a tackle attachment slot
-					this.Helper.Input.Suppress(e.Button);
-					Game1.playSound("cancel");
-					return;
-				}
-			}
-
-			if (Game1.player.isRidingHorse()
+			if (!Context.CanPlayerMove
+				|| Game1.player.isRidingHorse()
 				|| Game1.player.isInBed.Value
 				|| Game1.player.temporarilyInvincible
-				|| Game1.IsFading())
+				|| Game1.IsFading()
+				|| Game1.activeClickableMenu is not null
+				|| (new Location(x: (int)e.Cursor.ScreenPixels.X, y: (int)e.Cursor.ScreenPixels.Y)
+						is Location point
+					&& Game1.onScreenMenus.Any((IClickableMenu menu)
+						=> menu.isWithinBounds(x: point.X, y: point.Y))
+					&& Game1.currentLocation.checkAction(
+						tileLocation: (Game1.viewport.Location + point) / Game1.tileSize,
+						viewport: Game1.viewport,
+						who: Game1.player)))
 				return;
-
-			Vector2 screenPos = new(x: e.Cursor.ScreenPixels.X, y: e.Cursor.ScreenPixels.Y);
-			Location tilePos = new(x: (int)e.Cursor.ScreenPixels.X, y: (int)e.Cursor.ScreenPixels.Y);
-			if (Game1.activeClickableMenu is not null // No active menus or onscreen menus
-				|| Game1.onScreenMenus.Any((IClickableMenu menu) => menu.isWithinBounds(x: (int)screenPos.X, y: (int)screenPos.Y))
-				|| Game1.currentLocation.checkAction(tileLocation: tilePos, viewport: Game1.viewport, who: Game1.player))
-			{
-				return;
-			}
 
 			// World interactions
 			if (Game1.currentLocation.Objects.ContainsKey(e.Cursor.GrabTile)
@@ -250,37 +278,6 @@ namespace GiftWrapper
 						}
 					}
 				}
-				else if (ModEntry.IsWrappedGift(o))
-				{
-					// Unwrap the placed gift and pop out the actual gift when left-clicking
-					if (e.Button.IsActionButton())
-					{
-						// Add actual gift to inventory and remove wrapped gift object
-						Item actualGift = ModEntry.UnpackItem(modData: o.modData, recipientName: Game1.player.Name);
-						if (actualGift is null || Game1.createItemDebris(item: actualGift, origin: Game1.player.Position, direction: -1) is not null)
-						{
-							Game1.currentLocation.playSound("getNewSpecialItem");
-							Game1.currentLocation.Objects.Remove(e.Cursor.GrabTile);
-						}
-						else
-						{
-							Game1.playSound("cancel");
-							this.Monitor.Log($"Couldn't open the {o.Name} at {e.Cursor.GrabTile} (gift is a {actualGift.Name})", LogLevel.Debug);
-						}
-					}
-					else if (e.Button.IsUseToolButton())
-					{
-						Object wrappedGift = ModEntry.GetWrappedGift(o.modData);
-						if (Game1.player.addItemToInventory(item: wrappedGift) is null)
-						{
-							Game1.currentLocation.Objects.Remove(e.Cursor.GrabTile);
-						}
-						else
-						{
-							Game1.playSound("cancel");
-						}
-					}
-				}
 			}
 			else
 			{
@@ -295,26 +292,12 @@ namespace GiftWrapper
 						return;
 					}
 					const string placementSound = "throwDownITem"; // not a typo
-					if (ModEntry.IsGiftWrap(Game1.player.ActiveObject))
+					this.Helper.Input.Suppress(e.Button);
+					Game1.playSound(placementSound); 
+					Game1.currentLocation.Objects[e.Cursor.GrabTile] = Game1.player.ActiveObject.getOne() as Object;
+					if (--Game1.player.ActiveObject.Stack < 1)
 					{
-						this.Helper.Input.Suppress(e.Button);
-						Game1.playSound(placementSound); 
-						Game1.currentLocation.Objects[e.Cursor.GrabTile] = Game1.player.ActiveObject.getOne() as Object;
-						--Game1.player.ActiveObject.Stack;
-						if (Game1.player.ActiveObject.Stack < 1)
-						{
-							Game1.player.removeItemFromInventory(Game1.player.ActiveObject);
-						}
-					}
-					else if (ModEntry.IsWrappedGift(Game1.player.ActiveObject))
-					{
-						this.Helper.Input.Suppress(e.Button);
-						ModEntry.PlaceWrappedGift(
-							wrappedGift: Game1.player.CurrentItem,
-							location: Game1.currentLocation,
-							tilePosition: e.Cursor.GrabTile,
-							sound: placementSound);
-						return;
+						Game1.player.removeItemFromInventory(Game1.player.ActiveObject);
 					}
 				}
 			}
@@ -329,15 +312,15 @@ namespace GiftWrapper
 			if (!ModEntry.IsNpcAllowed(player: Game1.player, npc: e.Npc, gift: e.Gift))
 				return;
 
-			if (ModEntry.IsWrappedGift(e.Gift))
+			if (e.Gift is GiftItem gift)
 			{
 				// Cancel the wrapped gift NPC gift
 				e.Cancel = true;
 
 				Definitions definitions = this.Helper.GameContent.Load<Data.Data>(ModEntry.GameContentDataPath).Definitions;
 
-				Item actualGift = ModEntry.UnpackItem(modData: e.Gift.modData, recipientName: null);
-				if (ModEntry.IsNpcGiftAllowed(item: actualGift))
+				Item item = gift.ItemInGift.Value;
+				if (!ModEntry.IsNpcGiftAllowed(item))
 				{
 					// Ignore actual gifts that are invalid NPC gifts, eg. Tools
 					// Ignore actual gifts wrapped as part of large stacks, as items are typically only able to be given as gifts one-at-a-time
@@ -348,7 +331,7 @@ namespace GiftWrapper
 
 				// Redeliver the NPC gift as the actual gift
 				e.Npc.receiveGift(
-					o: actualGift as Object,
+					o: item as Object,
 					giver: Game1.player,
 					updateGiftLimitInfo: true,
 					friendshipChangeMultiplier: definitions.AddedFriendship,
@@ -367,13 +350,12 @@ namespace GiftWrapper
 		/// <param name="who">Player choosing the gift.</param>
 		private static void TrySecretSantaGift(ref Item i, Farmer who)
 		{
-			if (ModEntry.IsWrappedGift(item: i))
+			if (i is GiftItem gift)
 			{
-				Item gift = ModEntry.UnpackItem(modData: i.modData, recipientName: who.displayName);
-				if (gift is not null && Utility.highlightSantaObjects(i: gift))
+				if (gift.IsItemInside && Utility.highlightSantaObjects(i: gift.ItemInGift.Value))
 				{
 					// Unwrap valid gifts before given to the player's secret friend
-					i = gift;
+					i = gift.ItemInGift.Value;
 				}
 			}
 		}
@@ -403,6 +385,11 @@ namespace GiftWrapper
 		public static string GetThemedTexturePath()
 		{
 			return string.Format(ModEntry.LocalMenuTexturePath, ModEntry.Config.Theme);
+		}
+
+		public static Texture2D GetStyleTexture(Style style)
+		{
+			return ModEntry.GiftSprites[style.Texture ?? ModEntry.GameContentGiftTexturePath].Value;
 		}
 
 		public static Object GetWrapItem(int stack = 1)
@@ -451,238 +438,6 @@ namespace GiftWrapper
 		public static bool IsNpcGiftAllowed(Item item)
 		{
 			return item is Object o && o.canBeGivenAsGift() && o.Stack == 1;
-		}
-
-		public static Object GetWrappedGift(ModDataDictionary modData)
-		{
-			// Object-based solution for wrapped gifts:
-			Object wrappedGift = new(parentSheetIndex: ModEntry.JsonAssets.GetObjectId(ModEntry.ItemPrefix + ModEntry.WrappedGiftName), initialStack: 1)
-			{
-				// Tackle category: Cannot be stacked higher than 1, which solves the issue of modData folding.
-				// The unfortunate side-effect is that they can, however, be attached to rods. We'll sort this out in ButtonPressed.
-				Category = -22
-			};
-			if (modData is not null)
-			{
-				wrappedGift.modData = modData;
-			}
-			return wrappedGift;
-		}
-
-		public static bool PlaceWrappedGift(Item wrappedGift, GameLocation location, Vector2 tilePosition, string sound)
-		{
-			if (!string.IsNullOrEmpty(sound))
-			{
-				Game1.playSound(sound);
-			}
-
-			if (wrappedGift is null || location is null || (location.Objects.ContainsKey(tilePosition) && location.Objects[tilePosition] is not null))
-			{
-				return false;
-			}
-
-			Object placedGift = new(parentSheetIndex: ModEntry.JsonAssets.GetObjectId(ModEntry.ItemPrefix + ModEntry.WrappedGiftName), initialStack: 1);
-			if (wrappedGift.modData is not null)
-			{
-				placedGift.modData = wrappedGift.modData;
-			}
-
-			location.Objects[tilePosition] = placedGift;
-
-			if (Game1.player.Items.Contains(wrappedGift))
-			{
-				Game1.player.removeItemFromInventory(wrappedGift);
-			}
-
-			return true;
-		}
-
-		public static void PackItem(ref Object wrappedGift, Item giftToWrap, Vector2 placedGiftWrapPosition, bool showMessage)
-		{
-			if (Game1.player.couldInventoryAcceptThisItem(wrappedGift))
-			{
-				bool isDefined = Enum.IsDefined(typeof(GiftType), giftToWrap.GetType().Name);
-				bool isBigCraftable = giftToWrap is Object bc && bc.bigCraftable.Value;
-				if (!isDefined)
-				{
-					// Avoid adding items with undefined behaviour
-					Game1.showRedMessage(ModEntry.I18n.Get("error.wrapping", new { ItemName = wrappedGift.DisplayName }));
-					wrappedGift = null;
-					return;
-				}
-
-				// Define all the data to be serialised into the wrapped gift's modData
-				long giftSender = Game1.player.UniqueMultiplayerID;
-				string giftName = giftToWrap.Name;
-				int giftId = giftToWrap is Hat hat
-					? hat.which.Value
-					: giftToWrap is MeleeWeapon weapon
-						? Game1.content.Load<Dictionary<int, string>>(@"Data/weapons").First(pair => pair.Value.Split('/')[0] == weapon.Name).Key
-						: giftToWrap is Boots boots
-							? boots.indexInTileSheet.Value
-							: giftToWrap.ParentSheetIndex;
-				int giftParentId = giftToWrap is Object o
-					? o.preservedParentSheetIndex.Value
-					: -1;
-				int giftType = isBigCraftable
-					? (int)GiftType.BigCraftable
-					: isDefined
-						? (int)Enum.Parse(typeof(GiftType), giftToWrap.GetType().Name)
-						: -1;
-				int giftStack = giftToWrap is Object
-					? giftToWrap.Stack
-					: -1;
-				int giftQuality = giftToWrap is Object o1
-					? o1.Quality
-					: giftToWrap is Boots boots1
-						? boots1.appliedBootSheetIndex.Value
-						: -1;
-				int giftPreserve = giftToWrap is Object o2
-					? o2.preserve.Value.HasValue ? (int)o2.preserve.Value : -1
-					: -1;
-				int giftHoney = giftToWrap is Object o3 // We use 0 for honeyType as HoneyType.Wild == -1.
-					? o3.honeyType.Value.HasValue ? (int)o3.honeyType.Value.Value : 0
-					: 0;
-				string giftColour = giftToWrap is Clothing c
-					? string.Join("/", new [] { c.clothesColor.Value.R, c.clothesColor.Value.G, c.clothesColor.Value.B, c.clothesColor.Value.A })
-					: giftToWrap is Boots boots2
-						? boots2.indexInColorSheet.ToString()
-						: "-1";
-
-				// Convert the gift item's modData into a serialisable form to be added to the wrapped gift's modData
-				Dictionary<string, string> giftDataRaw = new();
-				foreach (var pair in giftToWrap.modData.FieldDict)
-					giftDataRaw.Add(pair.Key, pair.Value.Value);
-				string giftDataSerialised = JsonConvert.SerializeObject(giftDataRaw);
-
-				if (Game1.currentLocation.Objects.Remove(placedGiftWrapPosition))
-				{
-					// Add all fields into wrapped gift's modData
-					wrappedGift.modData[ModEntry.ItemPrefix + "giftsender"] = giftSender.ToString();
-					wrappedGift.modData[ModEntry.ItemPrefix + "giftname"] = giftName;
-					wrappedGift.modData[ModEntry.ItemPrefix + "giftid"] = giftId.ToString();
-					wrappedGift.modData[ModEntry.ItemPrefix + "giftparentid"] = giftParentId.ToString();
-					wrappedGift.modData[ModEntry.ItemPrefix + "gifttype"] = giftType.ToString();
-					wrappedGift.modData[ModEntry.ItemPrefix + "giftstack"] = giftStack.ToString();
-					wrappedGift.modData[ModEntry.ItemPrefix + "giftquality"] = giftQuality.ToString();
-					wrappedGift.modData[ModEntry.ItemPrefix + "giftpreserve"] = giftPreserve.ToString();
-					wrappedGift.modData[ModEntry.ItemPrefix + "gifthoney"] = giftHoney.ToString();
-					wrappedGift.modData[ModEntry.ItemPrefix + "giftcolour"] = giftColour;
-					wrappedGift.modData[ModEntry.ItemPrefix + "giftdata"] = giftDataSerialised;
-
-					if (showMessage)
-					{
-						string message = ModEntry.I18n.Get("message.giftwrapped", new
-							{
-								WrappedGiftName = wrappedGift.DisplayName,
-								ItemName = giftToWrap.DisplayName
-							});
-						Game1.addHUDMessage(new HUDMessage(type: "", number: 1, add: true, color: Game1.textColor, messageSubject: wrappedGift));
-					}
-				}
-			}
-		}
-
-		public static Item UnpackItem(ModDataDictionary modData, string recipientName)
-		{
-			string[] fields = new[] { 
-				"giftsender", "giftname", "giftid", 
-				"giftparentid", "gifttype", "giftstack", 
-				"giftquality", "giftpreserve", "gifthoney",
-				"giftcolour", "giftdata" };
-			if (fields.Any((string field) => !modData.ContainsKey(ModEntry.ItemPrefix + field)))
-			{
-				string msg = fields.Where((string field) => !modData.ContainsKey(field))
-					.Aggregate("This gift is missing data:", (string str, string field) => $"{str}\n{field}")
-					+ "\nIf this gift was placed before updating, please revert to the previous version and collect the gift!"
-					+ "\nOtherwise, leave a report on the mod page for Gift Wrapper with your log file (https://smapi.io/log).";
-				ModEntry.Instance.Monitor.Log(msg, LogLevel.Warn);
-				return null;
-			}
-
-			// Parse the wrapped gift's serialised modData fields to use in rebuilding its gift item
-			long giftSender = long.Parse(modData[ModEntry.ItemPrefix + fields[0]]);
-			string giftName = modData[ModEntry.ItemPrefix + fields[1]];
-			int giftId = int.Parse(modData[ModEntry.ItemPrefix + fields[2]]);
-			int giftParentId = int.Parse(modData[ModEntry.ItemPrefix + fields[3]]);
-			int giftType = int.Parse(modData[ModEntry.ItemPrefix + fields[4]]);
-			int giftStack = int.Parse(modData[ModEntry.ItemPrefix + fields[5]]);
-			int giftQuality = int.Parse(modData[ModEntry.ItemPrefix + fields[6]]);
-			int giftPreserve = int.Parse(modData[ModEntry.ItemPrefix + fields[7]]);
-			int giftHoney = int.Parse(modData[ModEntry.ItemPrefix + fields[8]]);
-			string giftColour = modData[ModEntry.ItemPrefix + fields[9]];
-			string giftData = modData[ModEntry.ItemPrefix + fields[10]];
-			Item actualGift = null;
-			switch (giftType)
-			{
-				case (int)GiftType.BedFurniture:
-					actualGift = new BedFurniture(which: giftId, tile: Vector2.Zero);
-					break;
-				case (int)GiftType.Furniture:
-					actualGift = new Furniture(which: giftId, tile: Vector2.Zero);
-					break;
-				case (int)GiftType.BigCraftable:
-					actualGift = new Object(tileLocation: Vector2.Zero, parentSheetIndex: giftId, isRecipe: false);
-					break;
-				case (int)GiftType.MeleeWeapon:
-					actualGift = new MeleeWeapon(spriteIndex: giftId);
-					break;
-				case (int)GiftType.Hat:
-					actualGift = new Hat(which: giftId);
-					break;
-				case (int)GiftType.Boots:
-					actualGift = new Boots(which: giftId); // todo: test boots colour
-					((Boots)actualGift).appliedBootSheetIndex.Set(giftQuality);
-					((Boots)actualGift).indexInColorSheet.Set(int.Parse(giftColour));
-					break;
-				case (int)GiftType.Clothing:
-					int[] colourSplit = giftColour.Split('/').ToList().ConvertAll(int.Parse).ToArray();
-					Color colour = new(r: colourSplit[0], g: colourSplit[1], b: colourSplit[2], alpha: colourSplit[3]);
-					actualGift = new Clothing(item_index: giftId);
-					((Clothing)actualGift).clothesColor.Set(colour);
-					break;
-				case (int)GiftType.Ring:
-					actualGift = new Ring(which: giftId);
-					break;
-				case (int)GiftType.Object:
-					actualGift = new Object(parentSheetIndex: giftId, initialStack: giftStack)
-					{
-						Quality = giftQuality,
-						Name = giftName
-					};
-					if (giftParentId != -1)
-						((Object)actualGift).preservedParentSheetIndex.Value = giftParentId;
-					if (giftPreserve != -1)
-						((Object)actualGift).preserve.Value = (Object.PreserveType)giftPreserve;
-					if (giftHoney != 0)
-						((Object)actualGift).honeyType.Value = (Object.HoneyType)giftHoney;
-					break;
-			}
-
-			if (actualGift is null)
-			{
-				return null;
-			}
-
-			var giftDataDeserialised = ((JObject)JsonConvert.DeserializeObject(giftData)).ToObject<Dictionary<string, string>>();
-			if (giftDataDeserialised is not null)
-			{
-				// Apply serialised mod data back to the gifted item
-				actualGift.modData.Set(giftDataDeserialised);
-			}
-
-			if (recipientName is not null && Game1.player.UniqueMultiplayerID != giftSender)
-			{
-				// Show a message to all players to celebrate this wonderful event
-				Multiplayer multiplayer = ModEntry.Instance.Helper.Reflection.GetField<Multiplayer>(typeof(Game1), "multiplayer").GetValue();
-				multiplayer.globalChatInfoMessage(ModEntry.ItemPrefix + (giftStack > 1 ? "message.giftopened_quantity" : "message.giftopened"),
-					recipientName, // Recipient's name
-					Game1.getFarmer(giftSender).Name, // Sender's name
-					actualGift.DisplayName, // Gift name
-					giftStack.ToString());	// Gift quantity
-			}
-
-			return actualGift;
 		}
 
 		public static Shop IsShopAllowed(ShopMenu menu, GameLocation location)

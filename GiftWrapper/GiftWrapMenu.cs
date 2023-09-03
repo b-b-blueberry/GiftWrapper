@@ -21,6 +21,11 @@ namespace GiftWrapper
 		/// </summary>
 		public readonly ClickableTextureComponent ItemSlot;
 		/// <summary>
+		/// Contextual clickable button to select the visual style of the wrapped gift,
+		/// revealed when there are items to be wrapped.
+		/// </summary>
+		public readonly ClickableTextureComponent StyleButton;
+		/// <summary>
 		/// Contextual clickable button to confirm the gift wrap action,
 		/// revealed when there are items to be wrapped.
 		/// </summary>
@@ -30,6 +35,11 @@ namespace GiftWrapper
 		/// passed to ModEntry.Instance.PackItem() to remove from the world objects list.
 		/// </summary>
 		public readonly Vector2 GiftWrapPosition;
+
+		/// <summary>
+		/// Selected visual style for wrapped gift item.
+		/// </summary>
+		public int StyleIndex;
 
 		/// <summary>
 		/// Item instance currently in the ItemSlot container to be wrapped.
@@ -121,12 +131,19 @@ namespace GiftWrapper
 		/// UI definitions.
 		/// </summary>
 		private readonly UI UI;
+		/// <summary>
+		/// Style definitions.
+		/// </summary>
+		private readonly List<(string ID, Style Style)> Styles;
+
 
 		public GiftWrapMenu(Vector2 tile) : base(inventory: null, context: null)
 		{
 			// Definitions
 			Data.Data data = ModEntry.Instance.Helper.GameContent.Load<Data.Data>(ModEntry.GameContentDataPath);
 			this.UI = data.UI;
+			this.Styles = data.Styles.Select(entry => (entry.Key, entry.Value)).ToList();
+			this.StyleIndex = Game1.random.Next(this.Styles.Count);
 
 			// Custom fields
 			this.GiftWrapPosition = tile;
@@ -153,6 +170,17 @@ namespace GiftWrapper
 				texture: this._menuTexture,
 				sourceRect: this.UI.ItemSlotSource,
 				scale: this.UI.Scale,
+				drawShadow: false)
+			{
+				myID = ++ID
+			};
+
+			// Style button clickable
+			this.StyleButton = new ClickableTextureComponent(
+				bounds: Rectangle.Empty,
+				texture: ModEntry.GetStyleTexture(this.Styles[this.StyleIndex].Style),
+				sourceRect: this.Styles[this.StyleIndex].Style.Area,
+				scale: Game1.pixelZoom,
 				drawShadow: false)
 			{
 				myID = ++ID
@@ -210,6 +238,25 @@ namespace GiftWrapper
 			{
 				this._itemSlotShakeTimer = item.Stack > 1 ? this.UI.LongShakeDuration : this.UI.ShortShakeDuration;
 			}
+		}
+
+		private void ChangeStyle(bool isNext)
+		{
+			// Cycle selected visual style for wrapped gift item
+			this.StyleIndex += isNext ? 1 : -1;
+			if (this.StyleIndex < 0)
+				this.StyleIndex = this.Styles.Count - 1;
+			if (this.StyleIndex >= this.Styles.Count)
+				this.StyleIndex = 0;
+			this.UpdateStyleButton();
+			Game1.playSound(this.UI.StyleSound);
+		}
+
+		private void UpdateStyleButton()
+		{
+			Style style = this.Styles[this.StyleIndex].Style;
+			this.StyleButton.texture = ModEntry.GetStyleTexture(style);
+			this.StyleButton.sourceRect = style.Area;
 		}
 
 		protected override void cleanupBeforeExit()
@@ -289,6 +336,11 @@ namespace GiftWrapper
 				width: this.UI.ItemSlotSource.Width * this.UI.Scale,
 				height: this.UI.ItemSlotSource.Height * this.UI.Scale);
 
+			// Style button and slot
+			this.StyleButton.bounds = this.ItemSlot.bounds;
+			this.StyleButton.setPosition(x: this.StyleButton.bounds.X, y: this.StyleButton.bounds.Y + this._backgroundArea.Height / 3);
+			this.UpdateStyleButton();
+
 			// Wrap button
 			this.WrapButton.bounds = new Rectangle(
 				x: this.ItemSlot.bounds.Right + (this._backgroundArea.Right - this.ItemSlot.bounds.Right) / 2,
@@ -333,23 +385,32 @@ namespace GiftWrapper
 					Game1.playSound(this.UI.FailureSound);
 				}
 			}
+			else if (this.StyleButton.containsPoint(x, y))
+			{
+				// Use next style
+				this.ChangeStyle(isNext: true);
+			}
 			else if (this.WrapButton.containsPoint(x, y) && this.IsWrapButtonAllowed && this.ItemToWrap is not null)
 			{
-				Object wrappedGift = ModEntry.GetWrappedGift(modData: null);
-				ModEntry.PackItem(ref wrappedGift, this.ItemToWrap, this.GiftWrapPosition, showMessage: true);
-				if (wrappedGift != null)
+				// Wrap item
+				GiftItem gift = new(
+					owner: Game1.player.UniqueMultiplayerID,
+					style: this.Styles[this.StyleIndex].ID,
+					item: this.ItemToWrap);
+				this.ItemToWrap = null;
+
+				// Give gift to player or throw on ground
+				if (!Game1.player.addItemToInventoryBool(item: gift))
 				{
-					// Convert wrapping to gift and close menu, giving the player the wrapped gift
-					this.ItemToWrap = null;
-					Game1.player.addItemToInventory(wrappedGift);
-					Game1.playSound(this.UI.SuccessSound);
-					this.exitThisMenuNoSound();
+					Game1.createItemDebris(item: gift, origin: Game1.player.Position, direction: -1);
 				}
-				else
-				{
-					// Wrapping couldn't be gifted
-					Game1.playSound(this.UI.FailureSound);
-				}
+
+				// Remove gift wrap
+				Game1.currentLocation?.removeObject(location: this.GiftWrapPosition, showDestroyedObject: true);
+
+				// Close menu
+				Game1.playSound(this.UI.SuccessSound);
+				this.exitThisMenuNoSound();
 			}
 			else if (this.inventory.getInventoryPositionOfClick(x, y) is int index && this.inventory.actualInventory.ElementAtOrDefault(index) is Item item && ModEntry.IsItemAllowed(item))
 			{
@@ -396,6 +457,11 @@ namespace GiftWrapper
 					Game1.playSound(this.UI.FailureSound);
 				}
 			}
+			else if (this.StyleButton.containsPoint(x, y))
+			{
+				// Use previous style
+				this.ChangeStyle(isNext: false);
+			}
 			else if (this.inventory.getInventoryPositionOfClick(x, y) is int index && this.inventory.actualInventory.ElementAtOrDefault(index) is Item item && ModEntry.IsItemAllowed(item))
 			{
 				bool movedOne = false;
@@ -436,6 +502,19 @@ namespace GiftWrapper
 			}
 		}
 
+		public override void receiveScrollWheelAction(int direction)
+		{
+			base.receiveScrollWheelAction(direction);
+
+			Point point = Game1.getMousePosition(ui_scale: true);
+
+			if (this.StyleButton.containsPoint(x: point.X, y: point.Y))
+			{
+				// Use next or previous style
+				this.ChangeStyle(isNext: direction < 0);
+			}
+		}
+
 		public override void performHoverAction(int x, int y)
 		{
 			if (Game1.freezeControls)
@@ -448,6 +527,7 @@ namespace GiftWrapper
 
 			const float scale = 0.25f;
 			this.ItemSlot.tryHover(x, y, maxScaleIncrease: scale);
+			this.StyleButton.tryHover(x, y, maxScaleIncrease: scale);
 			this.WrapButton.tryHover(x, y, maxScaleIncrease: scale);
 
 			if (this.IsCloseButtonAllowed)
@@ -502,9 +582,9 @@ namespace GiftWrapper
 				else if (Game1.options.doesInputListContain(Game1.options.moveRightButton, key))
 				{
 					// Right
-					if (current == this.ItemSlot.myID && this.IsWrapButtonAllowed)
+					if ((current == this.ItemSlot.myID || current == this.StyleButton.myID) && this.IsWrapButtonAllowed)
 					{
-						// ItemSlot => WrapButton
+						// ItemSlot/StyleButton => WrapButton
 						snapTo = this.WrapButton.myID;
 					}
 					else if (current < this.inventory.inventory.Count && current % inventoryWidth == inventoryWidth - 1)
@@ -516,12 +596,17 @@ namespace GiftWrapper
 				else if (Game1.options.doesInputListContain(Game1.options.moveUpButton, key))
 				{
 					// Up
-					if (current >= 0 && current < this.inventory.inventory.Count)
+					if (current == this.StyleButton.myID)
+					{
+						// StyleButton => ItemSlot
+						snapTo = this.ItemSlot.myID;
+					}
+					else if (current >= 0 && current < this.inventory.inventory.Count)
 					{
 						if (current < inventoryWidth)
 						{
-							// Inventory => WrapButton/ItemSlot
-							snapTo = this.IsWrapButtonAllowed ? this.WrapButton.myID : this.ItemSlot.myID;
+							// Inventory => StyleButton
+							snapTo = this.StyleButton.myID;
 						}
 						else
 						{
@@ -533,9 +618,14 @@ namespace GiftWrapper
 				else if (Game1.options.doesInputListContain(Game1.options.moveDownButton, key))
 				{
 					// Down
-					if (current == this.ItemSlot.myID || current == this.WrapButton.myID)
+					if (current == this.ItemSlot.myID)
 					{
-						// ItemSlot/WrapButton => Inventory
+						// ItemSlot => StyleButton
+						snapTo = this.StyleButton.myID;
+					}
+					else if (current == this.StyleButton.myID || current == this.WrapButton.myID)
+					{
+						// StyleButton/WrapButton => Inventory
 						snapTo = 0;
 					}
 				}
@@ -589,6 +679,17 @@ namespace GiftWrapper
 					// ??? => Default
 					snapTo = this._defaultClickable;
 			}
+
+			// Style changes
+			if (b is Buttons.LeftTrigger)
+			{
+				this.ChangeStyle(isNext: false);
+			}
+			if (b is Buttons.RightTrigger)
+			{
+				this.ChangeStyle(isNext: true);
+			}
+
 			this.setCurrentlySnappedComponentTo(snapTo);
 		}
 
@@ -732,6 +833,30 @@ namespace GiftWrapper
 						+ (this.ItemSlot.bounds.Size.ToVector2() - new Vector2(Game1.tileSize)) / 2
 						+ this._itemSlotShakeVector,
 					scaleSize: this.ItemSlot.scale / this.UI.Scale);
+
+				// Style slot
+				b.Draw(
+					texture: this.ItemSlot.texture,
+					position: this.StyleButton.bounds.Center.ToVector2(),
+					sourceRectangle: this.ItemSlot.sourceRect,
+					color: Colour.White,
+					rotation: 0,
+					scale: this.StyleButton.scale,
+					origin: this.ItemSlot.sourceRect.Size.ToVector2() / 2,
+					effects: SpriteEffects.None,
+					layerDepth: 1);
+
+				// Style button
+				b.Draw(
+					texture: this.StyleButton.texture,
+					position: this.StyleButton.bounds.Center.ToVector2(),
+					sourceRectangle: this.StyleButton.sourceRect,
+					color: Colour.White,
+					rotation: 0,
+					scale: this.StyleButton.scale,
+					origin: this.StyleButton.sourceRect.Size.ToVector2() / 2,
+					effects: SpriteEffects.None,
+					layerDepth: 1);
 
 				// Wrap button
 				if (this.IsWrapButtonAllowed)

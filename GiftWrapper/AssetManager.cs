@@ -14,6 +14,10 @@ namespace GiftWrapper
 			{
 				e.LoadFromModFile<Data.Data>(relativePath: $"{ModEntry.LocalDataPath}.json", priority: AssetLoadPriority.Medium);
 			}
+			else if (e.NameWithoutLocale.IsEquivalentTo(ModEntry.GameContentGiftTexturePath))
+			{
+				e.LoadFromModFile<Texture2D>(relativePath: $"{ModEntry.LocalGiftTexturePath}.png", priority: AssetLoadPriority.Medium);
+			}
 			else if (e.NameWithoutLocale.IsEquivalentTo(ModEntry.GameContentMenuTexturePath))
 			{
 				e.LoadFromModFile<Texture2D>(relativePath: $"{ModEntry.GetThemedTexturePath()}.png", priority: AssetLoadPriority.Medium);
