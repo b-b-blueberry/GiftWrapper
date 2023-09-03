@@ -78,6 +78,15 @@
 		"InfoTextPath": null,
 		"InfoTextKey": null,
 		
+		// Colours
+		
+        "InventoryInvalidGiftColour": {
+            "R": 35,
+            "G": 25,
+            "B": 25,
+            "A": 100
+        },
+        
 		// Animations
 		
 		"ShortShakeDuration": 400,
@@ -105,6 +114,12 @@
 			"Width": 16,
 			"Height": 16
 		},
+        "InventoryLockedSlotSource": {
+            "X": 48,
+            "Y": 152,
+            "Width": 16,
+            "Height": 16
+        },
 		"ItemSlotSource": {
 			"X": 104,
 			"Y": 80,

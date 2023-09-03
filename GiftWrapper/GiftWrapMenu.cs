@@ -169,12 +169,12 @@ namespace GiftWrapper
 				myID = ++ID
 			};
 
+			// Position components
+			this.gameWindowSizeChanged(oldBounds: Rectangle.Empty, newBounds: Game1.uiViewport.ToXna());
+
 			// Clickable navigation
 			this._defaultClickable = this.ItemSlot.myID;
 			this.populateClickableComponentList();
-
-			// Position components
-			this.gameWindowSizeChanged(oldBounds: Rectangle.Empty, newBounds: Game1.uiViewport.ToXna());
 
 			// Setup
 			Game1.playSound(this.UI.OpenSound);
@@ -351,7 +351,7 @@ namespace GiftWrapper
 					Game1.playSound(this.UI.FailureSound);
 				}
 			}
-			else if (this.inventory.getInventoryPositionOfClick(x, y) is int index && this.inventory.actualInventory.ElementAtOrDefault(index) is Item item)
+			else if (this.inventory.getInventoryPositionOfClick(x, y) is int index && this.inventory.actualInventory.ElementAtOrDefault(index) is Item item && ModEntry.IsItemAllowed(item))
 			{
 				if (this.ItemToWrap is not null && this.ItemToWrap.canStackWith(item))
 				{
@@ -396,7 +396,7 @@ namespace GiftWrapper
 					Game1.playSound(this.UI.FailureSound);
 				}
 			}
-			else if (this.inventory.getInventoryPositionOfClick(x, y) is int index && this.inventory.actualInventory.ElementAtOrDefault(index) is Item item)
+			else if (this.inventory.getInventoryPositionOfClick(x, y) is int index && this.inventory.actualInventory.ElementAtOrDefault(index) is Item item && ModEntry.IsItemAllowed(item))
 			{
 				bool movedOne = false;
 				if (this.ItemToWrap is not null)
@@ -460,7 +460,7 @@ namespace GiftWrapper
 				// Hover item slot
 				this.hoveredItem = this.ItemToWrap;
 			}
-			else if (this.inventory.getInventoryPositionOfClick(x, y) is int index && this.inventory.actualInventory.ElementAtOrDefault(index) is Item item)
+			else if (this.inventory.getInventoryPositionOfClick(x, y) is int index && this.inventory.actualInventory.ElementAtOrDefault(index) is Item item && ModEntry.IsItemAllowed(item))
 			{
 				// Hover inventory item
 				this.hoveredItem = item;
@@ -848,10 +848,6 @@ namespace GiftWrapper
 			}
 			for (int i = 0; i < this.inventory.capacity; ++i)
 			{
-				if (this.inventory.actualInventory.Count <= i || this.inventory.actualInventory.ElementAt(i) is null)
-					continue;
-
-				// Item icons
 				Vector2 position = new(
 					x: point.X
 						+ (i % (this.inventory.capacity / this.inventory.rows) * Game1.tileSize)
@@ -862,18 +858,23 @@ namespace GiftWrapper
 						- (i >= this.inventory.capacity / this.inventory.rows
 						   || !this.inventory.playerInventory || this.inventory.verticalGap != 0 ? 0 : 12));
 
-				bool drawShadow = this.inventory.highlightMethod(this.inventory.actualInventory[i]);
-				if (iconShakeTimer.ContainsKey(i))
-					position += 1 * new Vector2(Game1.random.Next(-1, 2), Game1.random.Next(-1, 2));
-				this.inventory.actualInventory[i].drawInMenu(
-					spriteBatch: b,
-					location: position,
-					scaleSize: this.inventory.inventory.Count > i ? this.inventory.inventory[i].scale : 1,
-					transparency: !this.inventory.highlightMethod(this.inventory.actualInventory[i]) ? 0.25f : 1,
-					layerDepth: 0.865f,
-					drawStackNumber: StackDrawType.Draw,
-					color: Color.White,
-					drawShadow: drawShadow);
+				// Item icons
+				if (this.inventory.actualInventory.ElementAtOrDefault(i) is Item item)
+				{
+					Colour colour = ModEntry.IsItemAllowed(item) ? Colour.White : this.UI.InventoryInvalidGiftColour;
+					bool drawShadow = this.inventory.highlightMethod(item);
+					if (iconShakeTimer.ContainsKey(i))
+						position += 1 * new Vector2(Game1.random.Next(-1, 2), Game1.random.Next(-1, 2));
+					item.drawInMenu(
+						spriteBatch: b,
+						location: position,
+						scaleSize: this.inventory.inventory.Count > i ? this.inventory.inventory[i].scale : 1,
+						transparency: !this.inventory.highlightMethod(item) ? 0.25f : 1,
+						layerDepth: 0.865f,
+						drawStackNumber: StackDrawType.Draw,
+						color: colour,
+						drawShadow: drawShadow);
+				}
 			}
 		}
 

@@ -390,6 +390,11 @@ namespace GiftWrapper
 			return item?.Name == ModEntry.ItemPrefix + ModEntry.WrappedGiftName;
 		}
 
+		public static bool IsItemAllowed(Item item)
+		{
+			return item is not (null or WrapItem or GiftItem) && item.canBeTrashed();
+		}
+		
 		public static bool IsInteractButton(SButton button)
 		{
 			return (button.IsActionButton() && !ModEntry.Config.InteractUsingToolButton)
