@@ -129,8 +129,8 @@ namespace GiftWrapper
 				mod: this.ModManifest,
 				name: () => ModEntry.I18n.Get("config.availableallyear.name"),
 				tooltip: () => ModEntry.I18n.Get("config.availableallyear.description"),
-				getValue: () => ModEntry.Config.AvailableAllYear,
-				setValue: (bool value) => ModEntry.Config.AvailableAllYear = value);
+				getValue: () => ModEntry.Config.AlwaysAvailable,
+				setValue: (bool value) => ModEntry.Config.AlwaysAvailable = value);
 
 			// Mouse buttons
 			api.AddBoolOption(
@@ -175,41 +175,15 @@ namespace GiftWrapper
 			}
 		}
 
+		/// <summary>
+		/// Interactions for shop menus.
+		/// </summary>
 		private void OnMenuChanged(object sender, MenuChangedEventArgs e)
 		{
-			bool isWinterStarPeriod = Game1.currentSeason == "winter" && Game1.dayOfMonth >= 18;
-			if (e.NewMenu is ShopMenu shop && shop.portraitPerson?.Name == "Pierre" && (ModEntry.Config.AvailableAllYear || isWinterStarPeriod))
+			// Add items to shop stock
+			if (e.NewMenu is ShopMenu menu && ModEntry.IsShopAllowed(menu: menu, location: Game1.currentLocation) is Shop shop)
 			{
-				// Gift wrap is purchaseable from Pierre throughout the Secret Friend gifting event
-				int id = ModEntry.JsonAssets.GetObjectId(ModEntry.ItemPrefix + ModEntry.GiftWrapName);
-				Object o = new(parentSheetIndex: id, initialStack: 1);
-				float price = o.Price * Game1.MasterPlayer.difficultyModifier;
-				if (Game1.dayOfMonth > 25)
-				{
-					// Sell gift wrap at clearance prices between the end of the event and the end of the year
-					// For an 80g base price, clearance price is 30g
-					price *= 0.4f;
-				}
-				shop.itemPriceAndStock.Add(o, new int[] { (int)(price * 0.2) * 5, int.MaxValue });
-				if (isWinterStarPeriod)
-				{
-					// Gift wrap appears at the top of the shop stock over the Winter Star festival
-					shop.forSale.Insert(0, o);
-				}
-				else
-				{
-					// If using the available-all-year config option, place gift wrap further down the list at other times of year
-					ISalable item = shop.forSale.FirstOrDefault((ISalable i) => i.Name == "Bouquet") ?? shop.forSale.Last((ISalable i) => i.Name.EndsWith("Sapling"));
-					if (item is not null)
-					{
-						int index = shop.forSale.IndexOf(item) + 1;
-						shop.forSale.Insert(index, o);
-					}
-					else
-					{
-						shop.forSale.Add(o);
-					}
-				}
+				ModEntry.AddToShop(menu: menu, shop: shop, item: ModEntry.GetWrapItem());
 			}
 		}
 
@@ -397,9 +371,37 @@ namespace GiftWrapper
 			}
 		}
 
-		internal static string GetThemedTexturePath()
+		/// <summary>
+		/// Adds an item to a given shop menu with properties from a given shop entry. 
+		/// </summary>
+		/// <param name="menu">Shop menu to add to.</param>
+		/// <param name="shop">Shop entry with sale data.</param>
+		/// <param name="item">Item to add to shop.</param>
+		public static void AddToShop(ShopMenu menu, Shop shop, ISalable item)
+		{
+			const int priceRounding = 5;
+			float price = item.salePrice() * shop.PriceMultiplier;
+			int priceRounded = (int)(price * (1f / priceRounding)) * priceRounding;
+			int index = shop.AddAtItem?.FirstOrDefault((string name)
+				=> menu.forSale.Any((ISalable i) => i.Name == name))
+				is string name ? menu.forSale.FindIndex((ISalable i) => i.Name == name) + 1 : 0;
+
+			menu.itemPriceAndStock.Add(item, new int[] { priceRounded, int.MaxValue });
+			if (index >= 0)
+				menu.forSale.Insert(index, item);
+			else
+				menu.forSale.Add(item);
+		}
+
+		public static string GetThemedTexturePath()
 		{
 			return string.Format(ModEntry.LocalMenuTexturePath, ModEntry.Config.Theme);
+		}
+
+		public static Object GetWrapItem(int stack = 1)
+		{
+			int id = ModEntry.JsonAssets.GetObjectId(ModEntry.ItemPrefix + ModEntry.GiftWrapName);
+			return new(parentSheetIndex: id, initialStack: stack);
 		}
 
 		public static bool IsGiftWrap(Item item)
@@ -659,6 +661,20 @@ namespace GiftWrapper
 			}
 
 			return actualGift;
+		}
+
+		public static Shop IsShopAllowed(ShopMenu menu, GameLocation location)
+		{
+			Data.Data data = ModEntry.Instance.Helper.GameContent.Load<Data.Data>(ModEntry.GameContentDataPath);
+			int id = data.Definitions.EventConditionId;
+			return data.Shops.FirstOrDefault((Shop shop)
+				=> (shop.Context is null
+					|| shop.Context == menu.storeContext
+					|| shop.Context == menu.portraitPerson?.Name)
+				&& (shop.Conditions is null
+					|| shop.Conditions.Length == 0
+					|| shop.Conditions.Any((string s) => location.checkEventPrecondition($"{id}/{s}") == id))
+				&& shop.IfAlwaysAvailable == ModEntry.Config.AlwaysAvailable);
 		}
 	}
 }

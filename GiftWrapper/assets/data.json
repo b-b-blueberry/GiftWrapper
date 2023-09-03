@@ -5,7 +5,44 @@
         ]
     },
     "Definitions": {
+        "EventConditionId": -4721
     },
+    "Shops": [
+        {
+            // Wrapping is sold by Pierre during the Secret Friend period,
+            // appearing at the top of the shop menu
+            "Context": "Pierre",
+            "AddAtItem": [],
+            "Conditions": [
+                "z spring/z summer/z fall/u 18 19 20 21 22 23 24"
+            ]
+        },
+        {
+            // If any shops happen to be open during the festival,
+            // they get a reduced stock with a higher price
+            "Conditions": [
+                "z spring/z summer/z fall/u 25"
+            ],
+            "PriceMultiplier": 2
+        },
+        {
+            // Wrapping is sold at clearance price after the festival until the end of the year
+            // For an 80g base price, clearance price is 80 * 0.4 = 30g
+            "Context": "Pierre",
+            "Conditions": [
+                "z spring/z summer/z fall/u 26 27 28"
+            ],
+            "PriceMultiplier": 0.4
+        },
+        {
+            // Wrapping is sold by Pierre regardless of any conditions if enabled in config
+            "Context": "Pierre",
+            "AddAtItem": [
+                "Catalogue"
+            ],
+            "IfAlwaysAvailable": true
+        }
+    ],
 	"UI": {
 		"Scale": 4,
 		

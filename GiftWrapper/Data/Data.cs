@@ -16,6 +16,10 @@ namespace GiftWrapper.Data
 		/// </summary>
 		public Definitions Definitions;
 		/// <summary>
+		/// List conditional shop entries to sell wrap items.
+		/// </summary>
+		public Shop[] Shops;
+		/// <summary>
 		/// Model for UI data, used for theme definitions.
 		/// </summary>
 		public UI UI;

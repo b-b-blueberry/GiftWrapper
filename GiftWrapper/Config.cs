@@ -10,7 +10,7 @@
 		}
 
 		public Themes Theme { get; set; } = (Themes)(-1);
-		public bool AvailableAllYear { get; set; } = false;
 		public bool InteractUsingToolButton { get; set; } = false;
+		public bool AlwaysAvailable { get; set; } = false;
 	}
 }
