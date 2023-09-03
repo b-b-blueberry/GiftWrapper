@@ -239,9 +239,8 @@ namespace GiftWrapper
 					}
 					else if (e.Button.IsUseToolButton())
 					{
-						if (Game1.player.couldInventoryAcceptThisItem(o))
+						if (Game1.player.addItemToInventoryBool(o))
 						{
-							Game1.player.addItemToInventory(o);
 							Game1.playSound("pickUpItem");
 							Game1.currentLocation.Objects.Remove(e.Cursor.GrabTile);
 						}
@@ -285,18 +284,12 @@ namespace GiftWrapper
 			}
 			else
 			{
-				// Place held gift wrap and wrapped gifts on the ground when left-clicking
-				bool isPlaceableTile = Game1.currentLocation.isTileLocationTotallyClearAndPlaceableIgnoreFloors(e.Cursor.GrabTile)
-					&& !Game1.currentLocation.Objects.ContainsKey(e.Cursor.GrabTile);
-				bool isPlaceableLocation =
-					!(Game1.currentLocation is Mine
-						|| Game1.currentLocation.Name.StartsWith("UndergroundMine")
-						|| Game1.currentLocation.isTemp());
+				// Place held gift wrap on the ground when left-clicking
 				if (e.Button.IsUseToolButton()
-					&& isPlaceableTile
-					&& (ModEntry.IsGiftWrap(Game1.player.ActiveObject) || ModEntry.IsWrappedGift(Game1.player.ActiveObject)))
+					&& ModEntry.IsTileAllowed(Game1.currentLocation, e.Cursor.GrabTile)
+					&& ModEntry.IsGiftWrap(Game1.player.ActiveObject))
 				{
-					if (!isPlaceableLocation)
+					if (!ModEntry.IsLocationAllowed(Game1.currentLocation))
 					{
 						Game1.showRedMessage(ModEntry.I18n.Get("error.location"));
 						return;
@@ -327,16 +320,14 @@ namespace GiftWrapper
 			}
 		}
 		
+		/// <summary>
+		/// Interactions for wrapped gifts.
+		/// </summary>
 		private void OnGiftGiven(object sender, EventArgsBeforeReceiveObject e)
 		{
 			// Ignore NPC gifts that aren't going to be accepted
-			if (!e.Npc.canReceiveThisItemAsGift(e.Gift)
-				|| !Game1.player.friendshipData.ContainsKey(e.Npc.Name)
-				|| Game1.player.friendshipData[e.Npc.Name].GiftsThisWeek > 1
-				|| Game1.player.friendshipData[e.Npc.Name].GiftsToday > 0)
-			{
+			if (!ModEntry.IsNpcAllowed(player: Game1.player, npc: e.Npc, gift: e.Gift))
 				return;
-			}
 
 			if (ModEntry.IsWrappedGift(e.Gift))
 			{
@@ -346,7 +337,7 @@ namespace GiftWrapper
 				Definitions definitions = this.Helper.GameContent.Load<Data.Data>(ModEntry.GameContentDataPath).Definitions;
 
 				Item actualGift = ModEntry.UnpackItem(modData: e.Gift.modData, recipientName: null);
-				if (actualGift is not Object o || o.bigCraftable.Value || !o.canBeGivenAsGift() || actualGift.Stack > 1)
+				if (ModEntry.IsNpcGiftAllowed(item: actualGift))
 				{
 					// Ignore actual gifts that are invalid NPC gifts, eg. Tools
 					// Ignore actual gifts wrapped as part of large stacks, as items are typically only able to be given as gifts one-at-a-time
@@ -433,6 +424,33 @@ namespace GiftWrapper
 		public static bool IsItemAllowed(Item item)
 		{
 			return item is not (null or WrapItem or GiftItem) && item.canBeTrashed();
+		}
+
+		public static bool IsLocationAllowed(GameLocation location)
+		{
+			return location is not (null or Mine or MineShaft or VolcanoDungeon or BeachNightMarket or MermaidHouse or AbandonedJojaMart)
+				&& !location.isTemp();
+		}
+
+		public static bool IsTileAllowed(GameLocation location, Vector2 tile)
+		{
+			return location.isTileLocationTotallyClearAndPlaceableIgnoreFloors(tile)
+				&& !location.Objects.ContainsKey(tile)
+				&& location.isCharacterAtTile(tile) is null
+				&& location.isTileOccupiedByFarmer(tile) is null;
+		}
+
+		public static bool IsNpcAllowed(Farmer player, NPC npc, Item gift)
+		{
+			return npc.canReceiveThisItemAsGift(i: gift)
+				&& player.friendshipData.TryGetValue(npc.Name, out Friendship data)
+				&& data.GiftsThisWeek < 2
+				&& data.GiftsToday == 0;
+		}
+
+		public static bool IsNpcGiftAllowed(Item item)
+		{
+			return item is Object o && o.canBeGivenAsGift() && o.Stack == 1;
 		}
 
 		public static Object GetWrappedGift(ModDataDictionary modData)
