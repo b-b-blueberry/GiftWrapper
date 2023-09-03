@@ -18,6 +18,7 @@ using System.IO;
 using System.Linq;
 using xTile.Dimensions;
 using Object = StardewValley.Object;
+using HarmonyLib; // el diavolo nuevo
 
 namespace GiftWrapper
 {
@@ -173,6 +174,12 @@ namespace GiftWrapper
 					category_id: Game1.audioEngine.GetCategoryIndex("Sound"));
 				Game1.soundBank.AddCue(cue);
 			}
+			
+			// Patches
+			Harmony harmony = new(id: this.ModManifest.UniqueID);
+			harmony.Patch(
+				original: AccessTools.Method(type: typeof(Event), name: nameof(Event.chooseSecretSantaGift)),
+				prefix: new HarmonyMethod(methodType: typeof(ModEntry), methodName: nameof(ModEntry.TrySecretSantaGift)));
 		}
 
 		/// <summary>
@@ -368,6 +375,25 @@ namespace GiftWrapper
 
 				// Remove wrapped gift from inventory
 				Game1.player.removeItemFromInventory(e.Gift);
+			}
+		}
+
+		/// <summary>
+		/// Harmony prefix method.
+		/// Allows gifted items to be gifted to the player's secret friend during the Winter Star event.
+		/// </summary>
+		/// <param name="i">Item chosen as a gift.</param>
+		/// <param name="who">Player choosing the gift.</param>
+		private static void TrySecretSantaGift(ref Item i, Farmer who)
+		{
+			if (ModEntry.IsWrappedGift(item: i))
+			{
+				Item gift = ModEntry.UnpackItem(modData: i.modData, recipientName: who.displayName);
+				if (gift is not null && Utility.highlightSantaObjects(i: gift))
+				{
+					// Unwrap valid gifts before given to the player's secret friend
+					i = gift;
+				}
 			}
 		}
 
