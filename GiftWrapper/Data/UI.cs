@@ -15,6 +15,10 @@ namespace GiftWrapper.Data
 		// Cues
 
 		/// <summary>
+		/// Blank sound cue.
+		/// </summary>
+		public string NoSound;
+		/// <summary>
 		/// Sound cue played on menu opened.
 		/// </summary>
 		public string OpenSound;

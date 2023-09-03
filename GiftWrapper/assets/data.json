@@ -1,5 +1,8 @@
 {
     "Audio": {
+        "Mods.blueberry.GiftWrapper.None": [
+            "none"
+        ]
     },
 	"UI": {
 		"Scale": 4,
@@ -7,6 +10,7 @@
 		// Cues
 		
 		"OpenSound": "newRecipe",
+        "NoSound": "Mods.blueberry.GiftWrapper.None",
 		"SuccessSound": "give_gift",
 		"FailureSound": "cancel",
 		"ItemSound": "coin",

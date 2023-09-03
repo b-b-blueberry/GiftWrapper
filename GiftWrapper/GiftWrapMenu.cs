@@ -408,7 +408,7 @@ namespace GiftWrapper
 						movedOne = true;
 					}
 					// Take all of wrapping and add one to wrap
-					else if (this.inventory.tryToAddItem(toPlace: this.ItemToWrap, sound: null) is null)
+					else if (this.inventory.tryToAddItem(toPlace: this.ItemToWrap, sound: this.UI.NoSound) is null)
 					{
 						this.ItemToWrap = item.getOne();
 						movedOne = true;
