@@ -46,7 +46,6 @@ namespace GiftWrapper
 		internal static readonly string ContentPackPath = Path.Combine("assets", "ContentPack");
 		internal static string LocalAudioPath => Path.Combine(ModEntry.Instance.Helper.DirectoryPath, "assets", "audio");
 
-		internal const int GiftWrapFriendshipBoost = 25;
 
 		internal enum GiftType
 		{
@@ -352,13 +351,15 @@ namespace GiftWrapper
 				// Cancel the wrapped gift NPC gift
 				e.Cancel = true;
 
+				Definitions definitions = this.Helper.GameContent.Load<Data.Data>(ModEntry.GameContentDataPath).Definitions;
+
 				Item actualGift = ModEntry.UnpackItem(modData: e.Gift.modData, recipientName: null);
 				if (actualGift is not Object o || o.bigCraftable.Value || !o.canBeGivenAsGift() || actualGift.Stack > 1)
 				{
 					// Ignore actual gifts that are invalid NPC gifts, eg. Tools
 					// Ignore actual gifts wrapped as part of large stacks, as items are typically only able to be given as gifts one-at-a-time
-					Game1.showRedMessage(message: Game1.content.LoadString("Strings\\StringsFromCSFiles:Event.cs.1803"));
-					Game1.playSound("cancel");
+					Game1.showRedMessage(message: Game1.content.LoadString(definitions.InvalidGiftStringPath));
+					Game1.playSound(definitions.InvalidGiftSound);
 					return;
 				}
 
@@ -367,11 +368,8 @@ namespace GiftWrapper
 					o: actualGift as Object,
 					giver: Game1.player,
 					updateGiftLimitInfo: true,
-					friendshipChangeMultiplier: 1,
+					friendshipChangeMultiplier: definitions.AddedFriendship,
 					showResponse: true);
-
-				// Add bonus friendship for having given them a wrapped gift
-				Game1.player.changeFriendship(amount: ModEntry.GiftWrapFriendshipBoost, n: e.Npc);
 
 				// Remove wrapped gift from inventory
 				Game1.player.removeItemFromInventory(e.Gift);

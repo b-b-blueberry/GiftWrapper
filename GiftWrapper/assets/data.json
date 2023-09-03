@@ -5,6 +5,9 @@
         ]
     },
     "Definitions": {
+        "AddedFriendship": 1.1,
+        "InvalidGiftStringPath": "Strings\\StringsFromCSFiles:Event.cs.1803",
+        "InvalidGiftSound": "cancel",
         "EventConditionId": -4721
     },
     "Shops": [
