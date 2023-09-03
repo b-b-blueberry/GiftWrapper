@@ -17,8 +17,6 @@
 
 	"config.availableallyear.name": "Available All Year",
 	"config.availableallyear.description": "Normally, Gift Wrap is only sold from Pierre's from the day you receive\nthe Secret Friend gift mail until the end of Winter.\nEnabling this option has Pierre sell Gift Wrap all-year round,\nbut it won't be at the top of his shop list outside of Winter!",
-	"config.invertmousebuttons.name": "Invert Mouse Button Actions",
-	"config.invertmousebuttons.description": "By default, the 'use tool' button picks-up and puts-down gifts and gift wrap,\nand the 'action' button interacts opens the gift wrapping menu and unwraps placed gifts.\nEnabling this option will flip the two actions.",
 
 	"config.theme.name": "Theme",
 	"config.theme.description": "Changes the appearance of the gift wrap menu!\nPick your favourite colour.",

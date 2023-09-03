@@ -131,14 +131,6 @@ namespace GiftWrapper
 				tooltip: () => ModEntry.I18n.Get("config.availableallyear.description"),
 				getValue: () => ModEntry.Config.AlwaysAvailable,
 				setValue: (bool value) => ModEntry.Config.AlwaysAvailable = value);
-
-			// Mouse buttons
-			api.AddBoolOption(
-				mod: this.ModManifest,
-				name: () => ModEntry.I18n.Get("config.invertmousebuttons.name"),
-				tooltip: () => ModEntry.I18n.Get("config.invertmousebuttons.description"),
-				getValue: () => ModEntry.Config.InteractUsingToolButton,
-				setValue: (bool value) => ModEntry.Config.InteractUsingToolButton = value);
 		}
 
 		private void OnGameLaunched(object sender, GameLaunchedEventArgs e)
@@ -241,11 +233,11 @@ namespace GiftWrapper
 				if (ModEntry.IsGiftWrap(o))
 				{
 					// Open the gift wrap menu from placed gift wrap when left-clicking
-					if (ModEntry.IsInteractButton(e.Button))
+					if (e.Button.IsActionButton())
 					{
 						Game1.activeClickableMenu = new GiftWrapMenu(tile: e.Cursor.GrabTile);
 					}
-					else if (ModEntry.IsPlacementButton(e.Button))
+					else if (e.Button.IsUseToolButton())
 					{
 						if (Game1.player.couldInventoryAcceptThisItem(o))
 						{
@@ -262,7 +254,7 @@ namespace GiftWrapper
 				else if (ModEntry.IsWrappedGift(o))
 				{
 					// Unwrap the placed gift and pop out the actual gift when left-clicking
-					if (ModEntry.IsInteractButton(e.Button))
+					if (e.Button.IsActionButton())
 					{
 						// Add actual gift to inventory and remove wrapped gift object
 						Item actualGift = ModEntry.UnpackItem(modData: o.modData, recipientName: Game1.player.Name);
@@ -277,7 +269,7 @@ namespace GiftWrapper
 							this.Monitor.Log($"Couldn't open the {o.Name} at {e.Cursor.GrabTile} (gift is a {actualGift.Name})", LogLevel.Debug);
 						}
 					}
-					else if (ModEntry.IsPlacementButton(e.Button))
+					else if (e.Button.IsUseToolButton())
 					{
 						Object wrappedGift = ModEntry.GetWrappedGift(o.modData);
 						if (Game1.player.addItemToInventory(item: wrappedGift) is null)
@@ -300,7 +292,7 @@ namespace GiftWrapper
 					!(Game1.currentLocation is Mine
 						|| Game1.currentLocation.Name.StartsWith("UndergroundMine")
 						|| Game1.currentLocation.isTemp());
-				if (ModEntry.IsPlacementButton(e.Button)
+				if (e.Button.IsUseToolButton()
 					&& isPlaceableTile
 					&& (ModEntry.IsGiftWrap(Game1.player.ActiveObject) || ModEntry.IsWrappedGift(Game1.player.ActiveObject)))
 				{
@@ -441,18 +433,6 @@ namespace GiftWrapper
 		public static bool IsItemAllowed(Item item)
 		{
 			return item is not (null or WrapItem or GiftItem) && item.canBeTrashed();
-		}
-		
-		public static bool IsInteractButton(SButton button)
-		{
-			return (button.IsActionButton() && !ModEntry.Config.InteractUsingToolButton)
-				|| (button.IsUseToolButton() && ModEntry.Config.InteractUsingToolButton);
-		}
-
-		public static bool IsPlacementButton(SButton button)
-		{
-			return (button.IsUseToolButton() && !ModEntry.Config.InteractUsingToolButton)
-				|| (button.IsActionButton() && ModEntry.Config.InteractUsingToolButton);
 		}
 
 		public static Object GetWrappedGift(ModDataDictionary modData)
