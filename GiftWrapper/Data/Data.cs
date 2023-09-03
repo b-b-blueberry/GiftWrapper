@@ -12,6 +12,10 @@ namespace GiftWrapper.Data
 		/// </summary>
 		public Dictionary<string, string[]> Audio;
 		/// <summary>
+		/// Various mod data definitions.
+		/// </summary>
+		public Definitions Definitions;
+		/// <summary>
 		/// Model for UI data, used for theme definitions.
 		/// </summary>
 		public UI UI;
