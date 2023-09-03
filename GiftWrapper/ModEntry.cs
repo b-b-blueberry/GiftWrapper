@@ -1,4 +1,6 @@
-﻿using Microsoft.Xna.Framework;
+﻿using GiftWrapper.Data;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -41,6 +43,7 @@ namespace GiftWrapper
 		internal static readonly string LocalCardTexturePath = Path.Combine("assets", "card");
 
 		internal static readonly string ContentPackPath = Path.Combine("assets", "ContentPack");
+		internal static string LocalAudioPath => Path.Combine(ModEntry.Instance.Helper.DirectoryPath, "assets", "audio");
 
 		internal const int GiftWrapFriendshipBoost = 25;
 
@@ -151,6 +154,25 @@ namespace GiftWrapper
 			this.Helper.Events.Input.ButtonPressed += this.OnButtonPressed;
 			this.Helper.Events.Display.MenuChanged += this.OnMenuChanged;
 			SpaceEvents.BeforeGiftGiven += this.OnGiftGiven;
+
+			// Gift data
+			Data.Data data = this.Helper.GameContent.Load<Data.Data>(ModEntry.GameContentDataPath);
+
+			// Audio
+			foreach (string id in data.Audio.Keys)
+			{
+				SoundEffect[] sounds = data.Audio[id].Select((string path) =>
+				{
+					path = Path.Combine(ModEntry.LocalAudioPath, $"{path}.wav");
+					using FileStream stream = new(path, FileMode.Open);
+					return SoundEffect.FromStream(stream);
+				}).ToArray();
+				CueDefinition cue = new(
+					cue_name: id,
+					sound_effects: sounds,
+					category_id: Game1.audioEngine.GetCategoryIndex("Sound"));
+				Game1.soundBank.AddCue(cue);
+			}
 		}
 
 		private void OnMenuChanged(object sender, MenuChangedEventArgs e)
