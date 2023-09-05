@@ -12,6 +12,7 @@
 	"message.giftwrapped": "{{WrappedGiftName}} ({{ItemName}})",
 
 	"error.location": "Can't place that here!",
+	"error.item.missing": "You don't have any {{WrapItemName}}!",
 
 	"menu.infopanel.body": "Place an item in the box to wrap it up!\n\nLeave it under another player's Winter Star tree to give them something nice to wake up to. Wrapped gifts are better for making friends in town, too!",
 

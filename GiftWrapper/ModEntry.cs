@@ -12,7 +12,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using xTile.Dimensions;
 using Object = StardewValley.Object;
 using HarmonyLib; // el diavolo nuevo
 
@@ -23,27 +22,28 @@ namespace GiftWrapper
 		internal static ModEntry Instance;
 		internal static Config Config;
 		internal static ITranslationHelper I18n => ModEntry.Instance.Helper.Translation;
-		internal static IJsonAssetsAPI JsonAssets;
 
 		internal static Definitions Definitions { get; private set; }
 		internal static Dictionary<string, Lazy<Texture2D>> GiftSprites { get; private set; }
+		internal static Lazy<Texture2D> WrapSprite { get; private set; } = new(ModEntry.LoadWrapTexture);
 
 		public const string AssetPrefix = "blueberry.GiftWrapper.";
 		public const string ItemPrefix = "blueberry.gw.";
-		public const string GiftWrapName = "giftwrap";
-		public const string WrappedGiftName = "wrappedgift";
+		public const string WrapItemName = "wrap";
+		public const string GiftItemName = "gift";
 
 		internal static readonly string GameContentDataPath = Path.Combine("Mods", ModEntry.AssetPrefix + "Assets", "Data");
+		internal static readonly string GameContentWrapTexturePath = Path.Combine("Mods", ModEntry.AssetPrefix + "Assets", "Wrap");
 		internal static readonly string GameContentGiftTexturePath = Path.Combine("Mods", ModEntry.AssetPrefix + "Assets", "Gifts");
 		internal static readonly string GameContentMenuTexturePath = Path.Combine("Mods", ModEntry.AssetPrefix + "Assets", "Menu");
 		internal static readonly string GameContentCardTexturePath = Path.Combine("Mods", ModEntry.AssetPrefix + "Assets", "Card");
 
 		internal static readonly string LocalDataPath = Path.Combine("assets", "data");
+		internal static readonly string LocalWrapTexturePath = Path.Combine("assets", "wrap");
 		internal static readonly string LocalGiftTexturePath = Path.Combine("assets", "gifts");
 		internal static readonly string LocalMenuTexturePath = Path.Combine("assets", "menu-{0}");
 		internal static readonly string LocalCardTexturePath = Path.Combine("assets", "card");
 
-		internal static readonly string ContentPackPath = Path.Combine("assets", "ContentPack");
 		internal static string LocalAudioPath => Path.Combine(ModEntry.Instance.Helper.DirectoryPath, "assets", "audio");
 
 
@@ -77,28 +77,20 @@ namespace GiftWrapper
 
 		private bool TryLoadApis()
 		{
-			// SpaceCore setup
+			// Add SpaceCore serialisation
 			try
 			{
 				ISpaceCoreAPI spacecoreApi = this.Helper.ModRegistry
 					.GetApi<ISpaceCoreAPI>
 					("spacechase0.SpaceCore");
 				spacecoreApi.RegisterSerializerType(typeof(GiftItem));
+				spacecoreApi.RegisterSerializerType(typeof(WrapItem));
 			}
 			catch (Exception e)
 			{
 				this.Monitor.Log($"Failed to register objects with SpaceCore.{Environment.NewLine}{e}", LogLevel.Error);
 				return false;
 			}
-
-			// Add Json Assets items
-			ModEntry.JsonAssets = this.Helper.ModRegistry.GetApi<IJsonAssetsAPI>("spacechase0.JsonAssets");
-			if (ModEntry.JsonAssets is null)
-			{
-				this.Monitor.Log("Can't access the Json Assets API. Is the mod installed correctly?", LogLevel.Error);
-				return false;
-			}
-			ModEntry.JsonAssets.LoadAssets(path: Path.Combine(this.Helper.DirectoryPath, ModEntry.ContentPackPath));
 
 			// Add GMCM config page
 			this.RegisterGenericModConfigMenuPage();
@@ -184,7 +176,6 @@ namespace GiftWrapper
 
 			// Event handlers
 			this.Helper.Events.Content.AssetRequested += AssetManager.OnAssetRequested;
-			this.Helper.Events.Input.ButtonPressed += this.OnButtonPressed;
 			this.Helper.Events.Display.MenuChanged += this.OnMenuChanged;
 			SpaceEvents.BeforeGiftGiven += this.OnGiftGiven;
 
@@ -230,80 +221,10 @@ namespace GiftWrapper
 			// Add items to shop stock
 			if (e.NewMenu is ShopMenu menu && ModEntry.IsShopAllowed(menu: menu, location: Game1.currentLocation) is Shop shop)
 			{
-				ModEntry.AddToShop(menu: menu, shop: shop, item: ModEntry.GetWrapItem());
+				ModEntry.AddToShop(menu: menu, shop: shop, item: new WrapItem());
 			}
 		}
 
-		/// <summary>
-		/// Interactions for wrapping paper item.
-		/// </summary>
-		private void OnButtonPressed(object sender, ButtonPressedEventArgs e)
-		{
-			if (!Context.CanPlayerMove
-				|| Game1.player.isRidingHorse()
-				|| Game1.player.isInBed.Value
-				|| Game1.player.temporarilyInvincible
-				|| Game1.IsFading()
-				|| Game1.activeClickableMenu is not null
-				|| (new Location(x: (int)e.Cursor.ScreenPixels.X, y: (int)e.Cursor.ScreenPixels.Y)
-						is Location point
-					&& Game1.onScreenMenus.Any((IClickableMenu menu)
-						=> menu.isWithinBounds(x: point.X, y: point.Y))
-					&& Game1.currentLocation.checkAction(
-						tileLocation: (Game1.viewport.Location + point) / Game1.tileSize,
-						viewport: Game1.viewport,
-						who: Game1.player)))
-				return;
-
-			// World interactions
-			if (Game1.currentLocation.Objects.ContainsKey(e.Cursor.GrabTile)
-				&& Game1.currentLocation.Objects[e.Cursor.GrabTile] is Object o)
-			{
-				if (ModEntry.IsGiftWrap(o))
-				{
-					// Open the gift wrap menu from placed gift wrap when left-clicking
-					if (e.Button.IsActionButton())
-					{
-						Game1.activeClickableMenu = new GiftWrapMenu(tile: e.Cursor.GrabTile);
-					}
-					else if (e.Button.IsUseToolButton())
-					{
-						if (Game1.player.addItemToInventoryBool(o))
-						{
-							Game1.playSound("pickUpItem");
-							Game1.currentLocation.Objects.Remove(e.Cursor.GrabTile);
-						}
-						else
-						{
-							Game1.playSound("cancel");
-						}
-					}
-				}
-			}
-			else
-			{
-				// Place held gift wrap on the ground when left-clicking
-				if (e.Button.IsUseToolButton()
-					&& ModEntry.IsTileAllowed(Game1.currentLocation, e.Cursor.GrabTile)
-					&& ModEntry.IsGiftWrap(Game1.player.ActiveObject))
-				{
-					if (!ModEntry.IsLocationAllowed(Game1.currentLocation))
-					{
-						Game1.showRedMessage(ModEntry.I18n.Get("error.location"));
-						return;
-					}
-					const string placementSound = "throwDownITem"; // not a typo
-					this.Helper.Input.Suppress(e.Button);
-					Game1.playSound(placementSound); 
-					Game1.currentLocation.Objects[e.Cursor.GrabTile] = Game1.player.ActiveObject.getOne() as Object;
-					if (--Game1.player.ActiveObject.Stack < 1)
-					{
-						Game1.player.removeItemFromInventory(Game1.player.ActiveObject);
-					}
-				}
-			}
-		}
-		
 		/// <summary>
 		/// Interactions for wrapped gifts.
 		/// </summary>
@@ -383,6 +304,11 @@ namespace GiftWrapper
 				menu.forSale.Add(item);
 		}
 
+		public static Texture2D LoadWrapTexture()
+		{
+			return ModEntry.Instance.Helper.GameContent.Load<Texture2D>(ModEntry.GameContentWrapTexturePath);
+		}
+
 		public static string GetThemedTexturePath()
 		{
 			return string.Format(ModEntry.LocalMenuTexturePath, ModEntry.Config.Theme);
@@ -391,22 +317,6 @@ namespace GiftWrapper
 		public static Texture2D GetStyleTexture(Style style)
 		{
 			return ModEntry.GiftSprites[style.Texture ?? ModEntry.GameContentGiftTexturePath].Value;
-		}
-
-		public static Object GetWrapItem(int stack = 1)
-		{
-			int id = ModEntry.JsonAssets.GetObjectId(ModEntry.ItemPrefix + ModEntry.GiftWrapName);
-			return new(parentSheetIndex: id, initialStack: stack);
-		}
-
-		public static bool IsGiftWrap(Item item)
-		{
-			return item?.Name == ModEntry.ItemPrefix + ModEntry.GiftWrapName;
-		}
-
-		public static bool IsWrappedGift(Item item)
-		{
-			return item?.Name == ModEntry.ItemPrefix + ModEntry.WrappedGiftName;
 		}
 
 		public static bool IsItemAllowed(Item item)

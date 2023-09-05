@@ -30,11 +30,6 @@ namespace GiftWrapper
 		/// revealed when there are items to be wrapped.
 		/// </summary>
 		public readonly ClickableTextureComponent WrapButton;
-		/// <summary>
-		/// Tile position of the placed gift wrap item used to open this menu at the current game location,
-		/// passed to ModEntry.Instance.PackItem() to remove from the world objects list.
-		/// </summary>
-		public readonly Vector2 GiftWrapPosition;
 
 		/// <summary>
 		/// Selected visual style for wrapped gift item.
@@ -137,7 +132,7 @@ namespace GiftWrapper
 		private readonly List<(string ID, Style Style)> Styles;
 
 
-		public GiftWrapMenu(Vector2 tile) : base(inventory: null, context: null)
+		public GiftWrapMenu() : base(inventory: null, context: null)
 		{
 			// Definitions
 			Data.Data data = ModEntry.Instance.Helper.GameContent.Load<Data.Data>(ModEntry.GameContentDataPath);
@@ -146,7 +141,6 @@ namespace GiftWrapper
 			this.StyleIndex = Game1.random.Next(this.Styles.Count);
 
 			// Custom fields
-			this.GiftWrapPosition = tile;
 			this._animTimerLimit = this.UI.WrapButtonFrameTime * this.UI.WrapButtonFrames;
 			this._borderScaled = new(x: this.UI.BorderSize.X * this.UI.Scale, y: this.UI.BorderSize.Y * this.UI.Scale);
 			this._menuTexture = ModEntry.Instance.Helper.GameContent.Load<Texture2D>(this.UI.MenuSpriteSheetPath);
@@ -220,6 +214,59 @@ namespace GiftWrapper
 			{
 				this.snapToDefaultClickableComponent();
 			}
+		}
+
+		private bool TryRemoveWrapItemFromInventory()
+		{
+			// Require wrap item in inventory on wrap
+			int index = Game1.player.Items.IndexOf(Game1.player.Items.FirstOrDefault((Item item) => item is WrapItem));
+			bool isFound = index >= 0;
+			if (isFound)
+			{
+				// Remove gift wrap from inventory
+				if (--Game1.player.Items[index].Stack <= 0)
+				{
+					Game1.player.removeItemFromInventory(whichItemIndex: index);
+				}
+			}
+
+			return isFound;
+		}
+
+		private void NotifyMissingWrapItem(bool playSound)
+		{
+			Game1.showRedMessage(ModEntry.I18n.Get("error.item.missing", new { WrapItemName = ModEntry.I18n.Get("item.giftwrap.name") }));
+			
+			// Sounds
+			if (playSound)
+			{
+				Game1.playSound(this.UI.FailureSound);
+			}
+		}
+
+		private void CreateItemAndCloseMenu(bool playSound)
+		{
+			// Sounds
+			if (playSound)
+			{
+				Game1.playSound(this.UI.SuccessSound);
+			}
+
+			// Wrap item
+			GiftItem gift = new(
+				owner: Game1.player.UniqueMultiplayerID,
+				style: this.Styles[this.StyleIndex].ID,
+				item: this.ItemToWrap);
+			this.ItemToWrap = null;
+
+			// Give gift to player or throw on ground
+			if (!Game1.player.addItemToInventoryBool(item: gift))
+			{
+				Game1.createItemDebris(item: gift, origin: Game1.player.Position, direction: -1);
+			}
+
+			// Close menu
+			this.exitThisMenuNoSound();
 		}
 
 		private string GetSoundFor(Item item)
@@ -392,25 +439,15 @@ namespace GiftWrapper
 			}
 			else if (this.WrapButton.containsPoint(x, y) && this.IsWrapButtonAllowed && this.ItemToWrap is not null)
 			{
-				// Wrap item
-				GiftItem gift = new(
-					owner: Game1.player.UniqueMultiplayerID,
-					style: this.Styles[this.StyleIndex].ID,
-					item: this.ItemToWrap);
-				this.ItemToWrap = null;
-
-				// Give gift to player or throw on ground
-				if (!Game1.player.addItemToInventoryBool(item: gift))
+				// Handle items and menu behaviours on wrap
+				if (this.TryRemoveWrapItemFromInventory())
 				{
-					Game1.createItemDebris(item: gift, origin: Game1.player.Position, direction: -1);
+					this.CreateItemAndCloseMenu(playSound: true);
 				}
-
-				// Remove gift wrap
-				Game1.currentLocation?.removeObject(location: this.GiftWrapPosition, showDestroyedObject: true);
-
-				// Close menu
-				Game1.playSound(this.UI.SuccessSound);
-				this.exitThisMenuNoSound();
+				else
+				{
+					this.NotifyMissingWrapItem(playSound: true);
+				}
 			}
 			else if (this.inventory.getInventoryPositionOfClick(x, y) is int index && this.inventory.actualInventory.ElementAtOrDefault(index) is Item item && ModEntry.IsItemAllowed(item))
 			{

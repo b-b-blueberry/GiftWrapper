@@ -1,8 +1,6 @@
 ﻿using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
-using StardewValley;
-using System.Linq;
 
 namespace GiftWrapper
 {
@@ -18,6 +16,10 @@ namespace GiftWrapper
 			{
 				e.LoadFromModFile<Texture2D>(relativePath: $"{ModEntry.LocalGiftTexturePath}.png", priority: AssetLoadPriority.Medium);
 			}
+			else if (e.NameWithoutLocale.IsEquivalentTo(ModEntry.GameContentWrapTexturePath))
+			{
+				e.LoadFromModFile<Texture2D>(relativePath: $"{ModEntry.LocalWrapTexturePath}.png", priority: AssetLoadPriority.Medium);
+			}
 			else if (e.NameWithoutLocale.IsEquivalentTo(ModEntry.GameContentMenuTexturePath))
 			{
 				e.LoadFromModFile<Texture2D>(relativePath: $"{ModEntry.GetThemedTexturePath()}.png", priority: AssetLoadPriority.Medium);
@@ -26,38 +28,10 @@ namespace GiftWrapper
 			{
 				e.LoadFromModFile<Texture2D>(relativePath: $"{ModEntry.LocalCardTexturePath}.png", priority: AssetLoadPriority.Medium);
 			}
-			else if (e.NameWithoutLocale.IsEquivalentTo(@"Data/ObjectInformation"))
-			{
-				if (ModEntry.JsonAssets is null || Game1.currentLocation is null)
-					return;
-
-				e.Edit(apply: AssetManager.EditData);
-
-			}
 			else if (e.NameWithoutLocale.IsEquivalentTo(@"Strings/UI"))
 			{
-				if (ModEntry.JsonAssets is null || Game1.currentLocation is null)
-					return;
-
 				e.Edit(apply: AssetManager.EditStrings);
 			}
-		}
-
-		private static void EditData(IAssetData asset)
-		{
-			var data = asset.AsDictionary<int, string>().Data;
-
-			// Add localised names and descriptions for new objects
-			foreach (var pair in data.Where(pair => pair.Value.Split('/') is string[] split && split[0].StartsWith(ModEntry.ItemPrefix)).ToList())
-			{
-				string[] fields = pair.Value.Split('/');
-				string name = fields[0].Split(separator: new[] { '.' }, count: 3)[2];
-				fields[4] = ModEntry.I18n.Get($"item.{name}.name").ToString();
-				fields[5] = ModEntry.I18n.Get($"item.{name}.description").ToString();
-				data[pair.Key] = string.Join("/", fields);
-			}
-
-			asset.AsDictionary<int, string>().ReplaceWith(data);
 		}
 
 		private static void EditStrings(IAssetData asset)

@@ -1,4 +1,5 @@
-﻿using Colour = Microsoft.Xna.Framework.Color;
+﻿using Microsoft.Xna.Framework;
+using Colour = Microsoft.Xna.Framework.Color;
 
 namespace GiftWrapper.Data
 {
@@ -6,6 +7,7 @@ namespace GiftWrapper.Data
 	{
 		public float AddedFriendship;
 		public int GiftValue;
+		public int WrapValue;
 		public int[] HitCount;
 		public int HitShake;
 		public string HitSound;
@@ -17,5 +19,7 @@ namespace GiftWrapper.Data
 		public int CategoryNumber;
 		public Colour CategoryTextColour;
 		public Colour SecretTextColour;
+		public string WrapItemTexture;
+		public Rectangle WrapItemSource;
 	}
 }

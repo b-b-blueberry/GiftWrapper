@@ -20,6 +20,7 @@
     },
     "Definitions": {
         "AddedFriendship": 1.1,
+        "WrapValue": 80,
         "GiftValue": 60,
         "HitCount": [
             3,
@@ -44,6 +45,13 @@
             "G": 0,
             "B": 210,
             "A": 230
+        },
+        "WrapItemTexture": "Mods/blueberry.GiftWrapperAssets/Wrap",
+        "WrapItemSource": {
+            "X": 0,
+            "Y": 0,
+            "Width": 20,
+            "Height": 20
         }
     },
     "Shops": [

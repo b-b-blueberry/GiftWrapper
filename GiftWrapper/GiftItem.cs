@@ -48,7 +48,7 @@ namespace GiftWrapper
 		public GiftItem() : base()
 		{
 			// Item values
-			this.Name = ModEntry.ItemPrefix + ModEntry.WrappedGiftName;
+			this.Name = ModEntry.ItemPrefix + ModEntry.GiftItemName;
 			this.Category = ModEntry.Definitions?.CategoryNumber ?? -1;
 			this.boundingBox.Value = new Rectangle(location: (this.TileLocation * Game1.tileSize).ToPoint(), size: new Point(Game1.tileSize));
 			this.Price = ModEntry.Definitions.GiftValue + (this.IsItemInside ? this.ItemInGift.Value.salePrice() : 0);
