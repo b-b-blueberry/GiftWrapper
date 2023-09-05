@@ -14,6 +14,161 @@ namespace GiftWrapper
 {
 	public class GiftWrapMenu : ItemGrabMenu
 	{
+		private class CraftingAnimation
+		{
+			public enum Steps
+			{
+				Idle,
+				Start,
+				Shake,
+				Smash,
+				Sparkle,
+				Showcase,
+				End
+			}
+
+			public readonly GiftWrapMenu Menu;
+
+			public Steps Step;
+			public int Timer;
+			public float Offset;
+			public float Scale;
+			public float Alpha;
+
+			private Action<bool> _endFunc;
+
+			public CraftingAnimation(GiftWrapMenu menu)
+			{
+				this.Menu = menu;
+				this.Reset();
+			}
+
+			public void Reset()
+			{
+				this.Step = Steps.Idle;
+				this.Timer = -1;
+				this.Offset = 1;
+				this.Scale = 0;
+				this.Alpha = 1;
+				this._endFunc = null;
+			}
+
+			public void Start(Action<bool> endFunc)
+			{
+				this.Reset();
+				this.Step = Steps.Start;
+				this._endFunc = endFunc;
+			}
+
+			public void End()
+			{
+				this._endFunc?.Invoke(true);
+				this.Reset();
+			}
+
+			public void Update(GameTime time)
+			{
+				float toScale = 1;
+				float toY = (this.Menu.StyleButton.bounds.Y - this.Menu.ItemSlot.bounds.Y) / 2;
+
+				// Timers
+				const int startDelay = 600;
+				const int endDelay = 1750;
+				if (this.Timer > 0)
+				{
+					this.Timer -= time.ElapsedGameTime.Milliseconds;
+				}
+
+				// Step 1
+				if (this.Step is Steps.Start)
+				{
+					// Block player input
+					Game1.freezeControls = true;
+
+					// Start shake
+					Game1.playSound(this.Menu.UI.CraftingStartSound);
+					this.Menu.WrapButton.visible = false;
+					this.Menu.MakePuff(this.Menu.WrapButton.bounds.Center.X, this.Menu.WrapButton.bounds.Center.Y);
+
+					// Next step
+					this.Step = Steps.Shake;
+					this.Timer = startDelay;
+				}
+
+				// Step 2
+				if (this.Step is Steps.Shake)
+				{
+					this.Alpha = this.Timer / (float)startDelay;
+
+					// Wait for timer to run down
+					if (this.Timer <= 0)
+					{
+						// Start smash
+						Game1.playSound(this.Menu.UI.CraftingMotionSound);
+						this.Alpha = 0;
+
+						// Next step
+						this.Step = Steps.Smash;
+					}
+				}
+
+				// Step 3
+				if (this.Step is Steps.Smash)
+				{
+					if (this.Offset < toY)
+					{
+						// Fling items together
+						this.Offset += this.Offset * this.Menu.UI.CraftingMotionRate / time.ElapsedGameTime.Milliseconds;
+
+						// Scale up items
+						this.Scale = this.Offset / toY * toScale;
+					}
+					else
+					{
+						// Start sparkles
+						this.Offset = toY;
+						this.Scale = toScale;
+
+						// Next step
+						this.Step = Steps.Sparkle;
+					}
+				}
+
+				// Step 4
+				if (this.Step is Steps.Sparkle)
+				{
+					// Start review
+					Game1.playSound(this.Menu.UI.SuccessSound);
+					Game1.playSound(this.Menu.UI.CraftingEndSound);
+					this.Menu.ItemSlot.visible = false;
+					this.Menu.MakeSparkles(
+						x: this.Menu.ItemSlot.bounds.Center.X,
+						y: this.Menu.ItemSlot.bounds.Center.Y + (int)toY);
+
+					// Next step
+					this.Step = Steps.Showcase;
+					this.Timer = endDelay;
+				}
+
+				// Step 5
+				if (this.Step is Steps.Showcase)
+				{
+					// End after delay
+					if (this.Timer <= 0)
+					{
+						// Next step
+						this.Step = Steps.End;
+					}
+				}
+
+				// End
+				if (this.Step is Steps.End)
+				{
+					this.End();
+				}
+			}
+		}
+
 		// Items
 
 		/// <summary>
@@ -48,7 +203,7 @@ namespace GiftWrapper
 		/// <summary>
 		/// Whether to have the contextual close button be visible and interactible.
 		/// </summary>
-		public bool IsCloseButtonAllowed { get => !Game1.options.SnappyMenus; }
+		public bool IsCloseButtonAllowed { get => !Game1.options.SnappyMenus && this._crafting.Step == CraftingAnimation.Steps.Idle; }
 
 		// Animations
 
@@ -68,6 +223,14 @@ namespace GiftWrapper
 		/// Offset applied to item slot on tick when shaking.
 		/// </summary>
 		private Vector2 _itemSlotShakeVector;
+		/// <summary>
+		/// List of animated sprites to draw.
+		/// </summary>
+		private readonly List<TemporaryAnimatedSprite> _sprites;
+		/// <summary>
+		/// Handler for animations played on wrap, if <see cref="Config.PlayAnimations"/> is enabled.
+		/// </summary>
+		private readonly CraftingAnimation _crafting;
 
 		// Regions
 
@@ -149,6 +312,10 @@ namespace GiftWrapper
 			this._infoText = this.UI.InfoTextPath is null || this.UI.InfoTextKey is null || !ModEntry.Instance.Helper.GameContent.Load<Dictionary<string, string>>(this.UI.InfoTextPath).TryGetValue(this.UI.InfoTextKey, out string str) || str is null
 				? ModEntry.I18n.Get("menu.infopanel.body")
 				: str;
+
+			// Crafting fields
+			this._sprites = new();
+			this._crafting = new(menu: this);
 
 			// Base fields
 			this.initializeUpperRightCloseButton();
@@ -269,6 +436,11 @@ namespace GiftWrapper
 			this.exitThisMenuNoSound();
 		}
 
+		private void OnCraftingAnimationEnd(bool isAnimated)
+		{
+			this.CreateItemAndCloseMenu(playSound: !isAnimated);
+		}
+
 		private string GetSoundFor(Item item)
 		{
 			string cue = this.UI.ItemSounds.TryGetValue(item.Name, out var key)
@@ -284,6 +456,49 @@ namespace GiftWrapper
 			if (this.UI.ShakeCategories.Contains(item.Category))
 			{
 				this._itemSlotShakeTimer = item.Stack > 1 ? this.UI.LongShakeDuration : this.UI.ShortShakeDuration;
+			}
+		}
+
+		private void MakePuff(int x, int y)
+		{
+			this._sprites.Add(new(
+				textureName: this.UI.CraftingPuffSpriteSheetPath,
+				sourceRect: this.UI.CraftingPuffSource,
+				animationInterval: this.UI.CraftingPuffFrameTime,
+				animationLength: this.UI.CraftingPuffFrames,
+				numberOfLoops: 0,
+				position: new Vector2(x: x, y: y)
+					- new Vector2(x: x % this.UI.CraftingPuffSource.Size.X, y: y % this.UI.CraftingPuffSource.Size.Y),
+				flicker: false,
+				flipped: false)
+			);
+		}
+
+		private void MakeSparkles(int x, int y)
+		{
+			Random r = new();
+			int count = r.Next(this.UI.CraftingSparkleCount.Min(), this.UI.CraftingSparkleCount.Max());
+			Colour[] colours = this.UI.CraftingSparkleColours
+				.Where((Colour colour, int index) => (index + 1) != (int)ModEntry.Config.Theme)
+				.ToArray();
+			for (int i = 0; i < count; ++i)
+			{
+				this._sprites.Add(new(
+					textureName: this.UI.CraftingSparkleSpriteSheetPath,
+					sourceRect: this.UI.CraftingSparkleSources[r.Next(this.UI.CraftingSparkleSources.Count)],
+					position: new(x: x, y: y),
+					flipped: r.NextDouble() < 0.5f,
+					alphaFade: 0,
+					color: colours[r.Next(colours.Length)])
+				{
+					motion = new Vector2(x: r.Next(-4, 4), y: r.Next(-6, 2)),
+					acceleration = new Vector2(x: 0, y: 0.1f),
+					rotationChange = ((float)Math.PI / r.Next(32, 64)) * (r.NextDouble() < 0.5f ? -1 : 1),
+					layerDepth = 1,
+					scaleChange = 0.025f * this.UI.Scale,
+					scaleChangeChange = -0.0005f * r.Next(1, 4) * this.UI.Scale,
+					scale = this.UI.Scale
+				});
 			}
 		}
 
@@ -308,6 +523,9 @@ namespace GiftWrapper
 
 		protected override void cleanupBeforeExit()
 		{
+			// Allow player input
+			Game1.freezeControls = false;
+
 			if (this.ItemToWrap is not null)
 			{
 				// Return items in item slot to player when closing
@@ -442,7 +660,10 @@ namespace GiftWrapper
 				// Handle items and menu behaviours on wrap
 				if (this.TryRemoveWrapItemFromInventory())
 				{
-					this.CreateItemAndCloseMenu(playSound: true);
+					if (ModEntry.Config.PlayAnimations)
+						this._crafting.Start(endFunc: this.OnCraftingAnimationEnd);
+					else
+						this.OnCraftingAnimationEnd(false);
 				}
 				else
 				{
@@ -764,7 +985,17 @@ namespace GiftWrapper
 			if (this._animFrame > 0 || this.WrapButton.scale > this.WrapButton.baseScale)
 				this._animFrame = (int)((float)this._animTimer / this._animTimerLimit * this.UI.WrapButtonFrames);
 
-			base.update(time);
+			// Sprites
+			for (int i = this._sprites.Count - 1; i >= 0; --i)
+			{
+				if (this._sprites[i]?.update(time) ?? false)
+					this._sprites.Remove(this._sprites[i]);
+			}
+
+			// Animations
+			this._crafting.Update(time: time);
+
+			base.update(time: time);
 		}
 
 		public override void draw(SpriteBatch b)
@@ -845,58 +1076,96 @@ namespace GiftWrapper
 					color: Game1.textColor);
 			}
 
+			// Decorations
+			foreach (Decoration decor in this.UI.Decorations)
+			{
+				b.Draw(
+					texture: this._menuTexture,
+					position: this._displayArea.Location.ToVector2() + decor.Position.ToVector2() * this.UI.Scale,
+					sourceRectangle: decor.Source,
+					color: Colour.White,
+					rotation: 0,
+					origin: decor.Source.Size.ToVector2() / 2,
+					scale: this.UI.Scale,
+					effects: SpriteEffects.None,
+					layerDepth: 1);
+			}
+
+			// Sprites
+			this._sprites?.ForEach((TemporaryAnimatedSprite sparkle) => sparkle.draw(spriteBatch: b, localPosition: true));
+
 			// Clickables
 			{
-				// Item slot
-				b.Draw(
-					texture: this.ItemSlot.texture,
-					position: this.ItemSlot.bounds.Location.ToVector2() + this.ItemSlot.bounds.Size.ToVector2() / 2 + this._itemSlotShakeVector,
-					sourceRectangle: new(
-						x: this.ItemSlot.sourceRect.X,
-						y: this.ItemSlot.sourceRect.Y,
-						width: this.ItemSlot.sourceRect.Width,
-						height: this.ItemSlot.sourceRect.Height),
-					color: Colour.White,
-					rotation: 0,
-					scale: this.ItemSlot.scale,
-					origin: this.ItemSlot.sourceRect.Size.ToVector2() / 2,
-					effects: SpriteEffects.None,
-					layerDepth: 1);
+				if (this.ItemSlot.visible)
+				{
+					// Item slot
+					b.Draw(
+						texture: this.ItemSlot.texture,
+						position: this.ItemSlot.bounds.Location.ToVector2()
+							+ this.ItemSlot.bounds.Size.ToVector2() / 2
+							+ this._itemSlotShakeVector,
+						sourceRectangle: new(
+							x: this.ItemSlot.sourceRect.X,
+							y: this.ItemSlot.sourceRect.Y,
+							width: this.ItemSlot.sourceRect.Width,
+							height: this.ItemSlot.sourceRect.Height),
+						color: Colour.White * this._crafting.Alpha,
+						rotation: 0,
+						scale: this.ItemSlot.scale,
+						origin: this.ItemSlot.sourceRect.Size.ToVector2() / 2,
+						effects: SpriteEffects.None,
+						layerDepth: 1);
 
-				// Item in slot
-				this.ItemToWrap?.drawInMenu(
-					spriteBatch: b,
-					location: new Vector2(x: this.ItemSlot.bounds.X, y: this.ItemSlot.bounds.Y)
-						+ (this.ItemSlot.bounds.Size.ToVector2() - new Vector2(Game1.tileSize)) / 2
-						+ this._itemSlotShakeVector,
-					scaleSize: this.ItemSlot.scale / this.UI.Scale);
+					// Item in slot
+					this.ItemToWrap?.drawInMenu(
+						spriteBatch: b,
+						location: this.ItemSlot.bounds.Location.ToVector2()
+							+ new Vector2(x: 0, y: this._crafting.Offset)
+							+ (this.ItemSlot.bounds.Size.ToVector2() - new Vector2(Game1.tileSize)) / 2
+							+ (this._crafting.Step == CraftingAnimation.Steps.Shake
+								? new Vector2(
+									x: Game1.random.Next(-2, 2),
+									y: Game1.random.Next(-2, 2))
+								: Vector2.Zero)
+							+ this._itemSlotShakeVector,
+						scaleSize: (this.ItemSlot.scale + this._crafting.Scale) / this.UI.Scale);
+				}
 
-				// Style slot
-				b.Draw(
-					texture: this.ItemSlot.texture,
-					position: this.StyleButton.bounds.Center.ToVector2(),
-					sourceRectangle: this.ItemSlot.sourceRect,
-					color: Colour.White,
-					rotation: 0,
-					scale: this.StyleButton.scale,
-					origin: this.ItemSlot.sourceRect.Size.ToVector2() / 2,
-					effects: SpriteEffects.None,
-					layerDepth: 1);
+				if (this.StyleButton.visible)
+				{
+					// Style slot
+					b.Draw(
+						texture: this.ItemSlot.texture,
+						position: this.StyleButton.bounds.Center.ToVector2(),
+						sourceRectangle: this.ItemSlot.sourceRect,
+						color: Colour.White * this._crafting.Alpha,
+						rotation: 0,
+						scale: this.StyleButton.scale,
+						origin: this.ItemSlot.sourceRect.Size.ToVector2() / 2,
+						effects: SpriteEffects.None,
+						layerDepth: 1);
 
-				// Style button
-				b.Draw(
-					texture: this.StyleButton.texture,
-					position: this.StyleButton.bounds.Center.ToVector2(),
-					sourceRectangle: this.StyleButton.sourceRect,
-					color: Colour.White,
-					rotation: 0,
-					scale: this.StyleButton.scale,
-					origin: this.StyleButton.sourceRect.Size.ToVector2() / 2,
-					effects: SpriteEffects.None,
-					layerDepth: 1);
+					// Style button
+					b.Draw(
+						texture: this.StyleButton.texture,
+						position: this.StyleButton.bounds.Center.ToVector2()
+							+ new Vector2(x: 0, y: -this._crafting.Offset)
+							+ (this._crafting.Step == CraftingAnimation.Steps.Shake
+								? new Vector2(
+									x: Game1.random.Next(-2, 2),
+									y: Game1.random.Next(-2, 2))
+								: Vector2.Zero),
+						sourceRectangle: this.StyleButton.sourceRect,
+						color: Colour.White,
+						rotation: 0,
+						scale: this.StyleButton.scale + this._crafting.Scale,
+						origin: this.StyleButton.sourceRect.Size.ToVector2() / 2,
+						effects: SpriteEffects.None,
+						layerDepth: 1);
+				}
 
 				// Wrap button
-				if (this.IsWrapButtonAllowed)
+				if (this.WrapButton.visible && this.IsWrapButtonAllowed)
 				{
 					b.Draw(
 						texture: this.WrapButton.texture,
@@ -913,20 +1182,6 @@ namespace GiftWrapper
 						effects: SpriteEffects.None,
 						layerDepth: 1);
 				}
-			}
-
-			// Decorations
-			foreach (Decoration decor in this.UI.Decorations) {
-				b.Draw(
-					texture: this._menuTexture,
-					position: this._displayArea.Location.ToVector2() + decor.Position.ToVector2() * this.UI.Scale,
-					sourceRectangle: decor.Source,
-					color: Colour.White,
-					rotation: 0,
-					origin: decor.Source.Size.ToVector2() / 2,
-					scale: this.UI.Scale,
-					effects: SpriteEffects.None,
-					layerDepth: 1);
 			}
 
 			// User

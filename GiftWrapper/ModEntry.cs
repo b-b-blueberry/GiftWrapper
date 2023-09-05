@@ -138,6 +138,14 @@ namespace GiftWrapper
 				getValue: () => ModEntry.Config.AlwaysAvailable,
 				setValue: (bool value) => ModEntry.Config.AlwaysAvailable = value);
 
+			// Animations
+			api.AddBoolOption(
+				mod: this.ModManifest,
+				name: () => ModEntry.I18n.Get("config.playanimations.name"),
+				tooltip: () => ModEntry.I18n.Get("config.playanimations.description"),
+				getValue: () => ModEntry.Config.PlayAnimations,
+				setValue: (bool value) => ModEntry.Config.PlayAnimations = value);
+
 			// Tooltip enabled
 			api.AddBoolOption(
 				mod: this.ModManifest,

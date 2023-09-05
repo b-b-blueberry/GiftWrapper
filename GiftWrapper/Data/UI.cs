@@ -12,8 +12,39 @@ namespace GiftWrapper.Data
 		/// </summary>
 		public int Scale;
 
+		// Crafting animation
+
+		/// <summary>
+		/// Rate of motion set for animating components on motion step on crafting animation.
+		/// </summary>
+		public float CraftingMotionRate;
+		/// <summary>
+		/// Duration in milliseconds of starting step on crafting animation.
+		/// </summary>
+		public int CraftingStartDuration;
+		/// <summary>
+		/// Duration in milliseconds of ending step on crafting animation.
+		/// </summary>
+		public int CraftingEndDuration;
+		/// <summary>
+		/// Min and max number of sparkle sprites created on crafting animation.
+		/// </summary>
+		public int[] CraftingSparkleCount;
+
 		// Cues
 
+		/// <summary>
+		/// Sound cue played on crafting.
+		/// </summary>
+		public string CraftingStartSound;
+		/// <summary>
+		/// Sound cue played on crafting.
+		/// </summary>
+		public string CraftingMotionSound;
+		/// <summary>
+		/// Sound cue played on crafting.
+		/// </summary>
+		public string CraftingEndSound;
 		/// <summary>
 		/// Blank sound cue.
 		/// </summary>
@@ -68,9 +99,21 @@ namespace GiftWrapper.Data
 		/// Colour set on items in inventory not allowed to be wrapped as gifts.
 		/// </summary>
 		public Colour InventoryInvalidGiftColour;
+		/// <summary>
+		/// Colours set on sparkles during crafting animation sequence.
+		/// </summary>
+		public List<Colour> CraftingSparkleColours;
 
 		// Animations
 
+		/// <summary>
+		/// Time between animation frames on puff sprite.
+		/// </summary>
+		public int CraftingPuffFrameTime;
+		/// <summary>
+		/// Number of frames in puff sprite animation.
+		/// </summary>
+		public int CraftingPuffFrames;
 		/// <summary>
 		/// Duration in milliseconds of shake animation on item slot.
 		/// </summary>
@@ -90,6 +133,14 @@ namespace GiftWrapper.Data
 
 		// Regions
 
+		/// <summary>
+		/// List of region of texture asset used when drawing sparkle sprites.
+		/// </summary>
+		public List<Rectangle> CraftingSparkleSources;
+		/// <summary>
+		/// Region of texture asset used when drawing component sprite.
+		/// </summary>
+		public Rectangle CraftingPuffSource;
 		/// <summary>
 		/// Region of texture asset used when drawing component sprite.
 		/// </summary>
@@ -128,6 +179,14 @@ namespace GiftWrapper.Data
 
 		// Assets
 
+		/// <summary>
+		/// Asset key used to load texture from game content.
+		/// </summary>
+		public string CraftingSparkleSpriteSheetPath;
+		/// <summary>
+		/// Asset key used to load texture from game content.
+		/// </summary>
+		public string CraftingPuffSpriteSheetPath;
 		/// <summary>
 		/// Asset key used to load texture from game content.
 		/// </summary>

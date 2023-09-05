@@ -11,6 +11,7 @@
 
 		public Themes Theme { get; set; } = (Themes)(-1);
 		public bool AlwaysAvailable { get; set; } = false;
+		public bool PlayAnimations { get; set; } = true;
 		public bool GiftPreviewEnabled { get; set; } = true;
 		public int GiftPreviewTileRange { get; set; } = 5;
 		public int GiftPreviewFadeSpeed { get; set; } = 10;

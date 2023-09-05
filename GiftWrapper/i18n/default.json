@@ -19,6 +19,8 @@
 
 	"config.availableallyear.name": "Available All Year",
 	"config.availableallyear.description": "Normally, Gift Wrap is only sold from Pierre's from the day you receive\nthe Secret Friend gift mail until the end of Winter.\nEnabling this option has Pierre sell Gift Wrap all-year round,\nbut it won't be at the top of his shop list outside of Winter!",
+	"config.playanimations.name": "Play Animations",
+	"config.playanimations.description": "...",
 	"config.giftpreviewtileenabled.name": "Gift Preview Enabled",
 	"config.giftpreviewtileenabled.description": "...",
 	"config.giftpreviewtilerange.name": "Gift Preview Tile Range",

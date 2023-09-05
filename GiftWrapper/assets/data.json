@@ -239,11 +239,21 @@
             }
         }
     },
-	"UI": {
-		"Scale": 4,
-		
-		// Cues
-		
+    "UI": {
+        "Scale": 4,
+
+        // Crafting animation
+
+        "CraftingMotionRate": 1.5,
+        "CraftingStartDuration": 600,
+        "CraftingEndDuration": 1750,
+        "CraftingSparkleCount": [ 16, 20 ],
+
+        // Cues
+
+        "CraftingStartSound": "throwDownITem",
+        "CraftingMotionSound": "fallDown",
+        "CraftingEndSound": "Ship",
         "NoSound": "Mods.blueberry.GiftWrapper.None",
         "OpenSound": "newRecipe",
         "SuccessSound": "give_gift",
@@ -328,155 +338,202 @@
             "B": 25,
             "A": 100
         },
-        
-		// Animations
-		
-		"ShortShakeDuration": 400,
-		"LongShakeDuration": 200,
-		"WrapButtonFrames": 4,
-		"WrapButtonFrameTime": 100,
-		
-		// Regions
-		
-		"SceneBackgroundSource": {
-			"X": 0,
-			"Y": 0,
-			"Width": 128,
-			"Height": 80
-		},
-		"InfoBackgroundSource": {
-			"X": 84,
-			"Y": 80,
-			"Width": 20,
-			"Height": 20
-		},
-		"InventorySlotSource": {
-			"X": 32,
-			"Y": 152,
-			"Width": 16,
-			"Height": 16
-		},
+        "CraftingSparkleColours": [
+            {
+                // Red
+                "R": 205,
+                "G": 92,
+                "B": 92,
+                "A": 255
+            },
+            {
+                // Blue
+                "R": 100,
+                "G": 149,
+                "B": 237,
+                "A": 255
+            },
+            {
+                // Green
+                "R": 124,
+                "G": 225,
+                "B": 22,
+                "A": 255
+            }
+        ],
+
+        // Animations
+
+        "CraftingPuffFrameTime": 50,
+        "CraftingPuffFrames": 8,
+        "ShortShakeDuration": 400,
+        "LongShakeDuration": 200,
+        "WrapButtonFrames": 4,
+        "WrapButtonFrameTime": 100,
+
+        // Regions
+
+        "CraftingSparkleSources": [
+            {
+                "X": 359,
+                "Y": 1437,
+                "Width": 14,
+                "Height": 14
+            },
+            {
+                "X": 377,
+                "Y": 1438,
+                "Width": 9,
+                "Height": 9
+            }
+        ],
+        "CraftingPuffSource": {
+            "X": 0,
+            "Y": 320,
+            "Width": 64,
+            "Height": 64
+        },
+        "SceneBackgroundSource": {
+            "X": 0,
+            "Y": 0,
+            "Width": 128,
+            "Height": 80
+        },
+        "InfoBackgroundSource": {
+            "X": 84,
+            "Y": 80,
+            "Width": 20,
+            "Height": 20
+        },
+        "InventorySlotSource": {
+            "X": 32,
+            "Y": 152,
+            "Width": 16,
+            "Height": 16
+        },
         "InventoryLockedSlotSource": {
             "X": 48,
             "Y": 152,
             "Width": 16,
             "Height": 16
         },
-		"ItemSlotSource": {
-			"X": 104,
-			"Y": 80,
-			"Width": 24,
-			"Height": 24
-		},
-		"WrapButtonSource": {
-			"X": 548,
-			"Y": 262,
-			"Width": 18,
-			"Height": 20
-		},
-		"Decorations": [
-			// Box
-			{
-				"Position": {
-					"X": 36,
-					"Y": 42
-				},
-				"Source": {
-					"X": 0,
-					"Y": 80,
-					"Width": 64,
-					"Height": 48
-				}
-			},
-			// Spangle
-			{
-				"Position": {
-					"X": 4,
-					"Y": 4
-				},
-				"Source": {
-					"X": 0,
-					"Y": 128,
-					"Width": 32,
-					"Height": 32
-				}
-			},
-			// Brumble
-			{
-				"Position": {
-					"X": 126,
-					"Y": 76
-				},
-				"Source": {
-					"X": 32,
-					"Y": 128,
-					"Width": 32,
-					"Height": 24
-				}
-			},
-			// Scissors
-			{
-				"Position": {
-					"X": 218,
-					"Y": 106
-				},
-				"Source": {
-					"X": 64,
-					"Y": 104,
-					"Width": 64,
-					"Height": 76
-				}
-			},
-			// Tape
-			{
-				"Position": {
-					"X": 4,
-					"Y": 144
-				},
-				"Source": {
-					"X": 0,
-					"Y": 160,
-					"Width": 32,
-					"Height": 20
-				}
-			}
-		],
-		
-		// Assets
-		
-		"MenuSpriteSheetPath": "Mods/blueberry.GiftWrapper.Assets/Menu",
-		"CardSpriteSheetPath": "Mods/blueberry.GiftWrapper.Assets/Card",
-		"WrapButtonSpriteSheetPath": "LooseSprites/JunimoNote",
-		
-		// Dimensions
-		
-		"BorderSourceAt": {
-			"X": 64,
-			"Y": 80
-		},
-		"BorderSize": {
-			"X": 9,
-			"Y": 8
-		},
-		"BorderOffset": {
-			"X": 1,
-			"Y": 1
-		},
-		"CardOffset": {
-			"X": 40,
-			"Y": 34
-		},
-		"InfoTextMargin": {
-			"X": 4,
-			"Y": 4
-		},
-		"InventoryMargin": {
-			"X": 6,
-			"Y": 4
-		},
-		
-		// Sizes
-		
-		"InfoBackgroundWidth": 74
-	}
+        "ItemSlotSource": {
+            "X": 104,
+            "Y": 80,
+            "Width": 24,
+            "Height": 24
+        },
+        "WrapButtonSource": {
+            "X": 548,
+            "Y": 262,
+            "Width": 18,
+            "Height": 20
+        },
+        "Decorations": [
+            // Box
+            {
+                "Position": {
+                    "X": 36,
+                    "Y": 42
+                },
+                "Source": {
+                    "X": 0,
+                    "Y": 80,
+                    "Width": 64,
+                    "Height": 48
+                }
+            },
+            // Spangle
+            {
+                "Position": {
+                    "X": 4,
+                    "Y": 4
+                },
+                "Source": {
+                    "X": 0,
+                    "Y": 128,
+                    "Width": 32,
+                    "Height": 32
+                }
+            },
+            // Brumble
+            {
+                "Position": {
+                    "X": 126,
+                    "Y": 76
+                },
+                "Source": {
+                    "X": 32,
+                    "Y": 128,
+                    "Width": 32,
+                    "Height": 24
+                }
+            },
+            // Scissors
+            {
+                "Position": {
+                    "X": 218,
+                    "Y": 106
+                },
+                "Source": {
+                    "X": 64,
+                    "Y": 104,
+                    "Width": 64,
+                    "Height": 76
+                }
+            },
+            // Tape
+            {
+                "Position": {
+                    "X": 4,
+                    "Y": 144
+                },
+                "Source": {
+                    "X": 0,
+                    "Y": 160,
+                    "Width": 32,
+                    "Height": 20
+                }
+            }
+        ],
+
+        // Assets
+
+        "CraftingSparkleSpriteSheetPath": "LooseSprites/Cursors",
+        "CraftingPuffSpriteSheetPath": "TileSheets/animations",
+        "MenuSpriteSheetPath": "Mods/blueberry.GiftWrapper.Assets/Menu",
+        "CardSpriteSheetPath": "Mods/blueberry.GiftWrapper.Assets/Card",
+        "WrapButtonSpriteSheetPath": "LooseSprites/JunimoNote",
+
+        // Dimensions
+
+        "BorderSourceAt": {
+            "X": 64,
+            "Y": 80
+        },
+        "BorderSize": {
+            "X": 9,
+            "Y": 8
+        },
+        "BorderOffset": {
+            "X": 1,
+            "Y": 1
+        },
+        "CardOffset": {
+            "X": 40,
+            "Y": 34
+        },
+        "InfoTextMargin": {
+            "X": 4,
+            "Y": 4
+        },
+        "InventoryMargin": {
+            "X": 6,
+            "Y": 4
+        },
+
+        // Sizes
+
+        "InfoBackgroundWidth": 74
+    }
 }
