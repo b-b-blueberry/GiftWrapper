@@ -17,8 +17,6 @@ namespace GiftWrapper
 	[XmlType("Mods_blueberry_GiftWrapper_GiftItem")]
 	public class GiftItem : Object
 	{
-		public static Definitions Definitions { get; internal set; }
-
 		public readonly NetLong Owner;
 		public readonly NetString Style;
 		public readonly NetRef<Item> ItemInGift;
@@ -51,7 +49,7 @@ namespace GiftWrapper
 		{
 			// Item values
 			this.Name = ModEntry.ItemPrefix + ModEntry.WrappedGiftName;
-			this.Category = GiftItem.Definitions?.CategoryNumber ?? -1;
+			this.Category = ModEntry.Definitions?.CategoryNumber ?? -1;
 			this.boundingBox.Value = new Rectangle(location: (this.TileLocation * Game1.tileSize).ToPoint(), size: new Point(Game1.tileSize));
 			this.Price = ModEntry.Definitions.GiftValue + (this.IsItemInside ? this.ItemInGift.Value.salePrice() : 0);
 
@@ -79,7 +77,7 @@ namespace GiftWrapper
 			this.Owner.Set(owner);
 			this.Style.Set(style);
 			this.ItemInGift.Set(item);
-			this.HitCount.Set(Game1.random.Next(GiftItem.Definitions.HitCount.First(), GiftItem.Definitions.HitCount.Last() + 1));
+			this.HitCount.Set(Game1.random.Next(ModEntry.Definitions.HitCount.First(), ModEntry.Definitions.HitCount.Last() + 1));
 		}
 
 		public GiftItem(Vector2 tileLocation, int parentSheetIndex, string Givenname, bool canBeSetDown, bool canBeGrabbed, bool isHoedirt, bool isSpawnedObject) : this() {}
@@ -87,11 +85,6 @@ namespace GiftWrapper
 		public GiftItem(int parentSheetIndex, int initialStack, bool isRecipe = false, int price = -1, int quality = 0) : this() {}
 
 		public GiftItem(Vector2 tileLocation, int parentSheetIndex, int initialStack) : this() {}
-
-		public static void ReloadDefinitions(Definitions definitions = null)
-		{
-			GiftItem.Definitions = definitions ?? ModEntry.Instance.Helper.GameContent.Load<Data.Data>(ModEntry.GameContentDataPath).Definitions;
-		}
 
 		private void OnStyleChanged(NetString field, string oldValue, string newValue)
 		{
@@ -105,7 +98,7 @@ namespace GiftWrapper
 
 		public override Colour getCategoryColor()
 		{
-			return GiftItem.Definitions.CategoryTextColour;
+			return ModEntry.Definitions.CategoryTextColour;
 		}
 
 		public override string getDescription()
@@ -220,7 +213,7 @@ namespace GiftWrapper
 				int count = Game1.random.Next(4, 8);
 
 				// Chunks (paper)
-				this.shakeTimer = GiftItem.Definitions.HitShake;
+				this.shakeTimer = ModEntry.Definitions.HitShake;
 				Game1.createRadialDebris(
 					location: who.currentLocation,
 					texture: this._style.Texture ?? ModEntry.GameContentGiftTexturePath,
@@ -235,7 +228,7 @@ namespace GiftWrapper
 					color: Colour.White,
 					scale: Game1.pixelZoom);
 				who.currentLocation.playSoundAt(
-					audioName: this._style.HitSound ?? GiftItem.Definitions.HitSound,
+					audioName: this._style.HitSound ?? ModEntry.Definitions.HitSound,
 					position: who.getTileLocation());
 
 				this.HitCount.Set(this.HitCount.Value - 1);
@@ -250,7 +243,7 @@ namespace GiftWrapper
 						numberOfChunks: Game1.random.Next(4, 8),
 						resource: false);
 					who.currentLocation.playSoundAt(
-						audioName: this._style.LastHitSound ?? GiftItem.Definitions.LastHitSound,
+						audioName: this._style.LastHitSound ?? ModEntry.Definitions.LastHitSound,
 						position: who.getTileLocation());
 
 					// Sparkles
@@ -264,7 +257,7 @@ namespace GiftWrapper
 						flicker: false,
 						flipped: false);
 					who.currentLocation.TemporarySprites.Add(sprite);
-					Game1.playSound(this._style.OpenSound ?? GiftItem.Definitions.OpenSound);
+					Game1.playSound(this._style.OpenSound ?? ModEntry.Definitions.OpenSound);
 
 					// Give gift to player
 					who.currentLocation.debris.Add(new Debris(
@@ -349,7 +342,7 @@ namespace GiftWrapper
 					text: this.ItemInGift.Value.DisplayName,
 					font: font,
 					position: position + new Vector2(x: Game1.tileSize * 1.25f, y: Game1.tileSize * 0.25f),
-					color: GiftItem.Definitions.SecretTextColour * alpha);
+					color: ModEntry.Definitions.SecretTextColour * alpha);
 			}
 		}
 

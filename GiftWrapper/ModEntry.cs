@@ -25,6 +25,7 @@ namespace GiftWrapper
 		internal static ITranslationHelper I18n => ModEntry.Instance.Helper.Translation;
 		internal static IJsonAssetsAPI JsonAssets;
 
+		internal static Definitions Definitions { get; private set; }
 		internal static Dictionary<string, Lazy<Texture2D>> GiftSprites { get; private set; }
 
 		public const string AssetPrefix = "blueberry.GiftWrapper.";
@@ -189,7 +190,7 @@ namespace GiftWrapper
 
 			// Gift data
 			Data.Data data = this.Helper.GameContent.Load<Data.Data>(ModEntry.GameContentDataPath);
-			GiftItem.ReloadDefinitions(data.Definitions);
+			ModEntry.Definitions = data.Definitions;
 			ModEntry.GiftSprites = data.Styles.Values
 				.Select((Style style) => style.Texture ?? ModEntry.GameContentGiftTexturePath)
 				.Distinct()
