@@ -349,6 +349,7 @@ namespace GiftWrapper
 					location: position,
 					scaleSize: scale);
 				text = this.ItemInGift.Value.DisplayName;
+				colour = this.ItemInGift.Value.getCategoryColor();
 			}
 			else if (Game1.getFarmerMaybeOffline(this.Owner.Value) is Farmer owner)
 			{
