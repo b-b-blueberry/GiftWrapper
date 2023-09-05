@@ -2,7 +2,7 @@
 	"category.gift.name": "Gift",
 
 	"item.giftwrap.name": "Wrapping Paper",
-	"item.giftwrap.description": "It's a roll of wrapping paper for secret gifts.",
+	"item.giftwrap.description": "A roll of wrapping paper for secret gifts.\nConsumed on use.",
 	"item.wrappedgift.name": "Wrapped Gift",
 	"item.wrappedgift.description": "I wonder what's inside..?",
 	"item.default.name": "???",
