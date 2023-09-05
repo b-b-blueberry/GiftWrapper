@@ -4,7 +4,8 @@
 	"item.giftwrap.name": "Wrapping Paper",
 	"item.giftwrap.description": "A roll of wrapping paper for secret gifts.\nConsumed on use.",
 	"item.wrappedgift.name": "Wrapped Gift",
-	"item.wrappedgift.description": "I wonder what's inside..?",
+	"item.wrappedgift.description.owner": "Can be given as a gift, or placed around the house.\n\nContains:",
+	"item.wrappedgift.description.other": "Wonder what's inside? Place it on the floor and open it up!\n\nFrom:",
 	"item.default.name": "???",
 	"item.default.description": "???",
 

@@ -19,6 +19,7 @@ namespace GiftWrapper.Data
 		public int CategoryNumber;
 		public Colour CategoryTextColour;
 		public Colour SecretTextColour;
+		public Colour? DefaultTextColour;
 		public string WrapItemTexture;
 		public Rectangle WrapItemSource;
 	}

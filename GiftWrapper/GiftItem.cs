@@ -104,7 +104,7 @@ namespace GiftWrapper
 		public override string getDescription()
 		{
 			return Game1.parseText(
-				text: ModEntry.I18n.Get("item.wrappedgift.description"),
+				text: ModEntry.I18n.Get(this.IsOwnerViewing ? "item.wrappedgift.description.owner" : "item.wrappedgift.description.other"),
 				whichFont: Game1.smallFont,
 				width: this.getDescriptionWidth());
 		}
@@ -310,9 +310,15 @@ namespace GiftWrapper
 				boldTitleText: boldTitleText,
 				moneyAmountToDisplayAtBottom: moneyAmountToDisplayAtBottom);
 
-			if (this.IsOwnerViewing && this.IsItemInside)
+			string text = this.IsOwnerViewing && this.IsItemInside
+				? this.ItemInGift.Value.DisplayName
+				: Game1.getFarmerMaybeOffline(this.Owner.Value) is Farmer owner
+					? owner.displayName
+					: null;
+			
+			if (text is not null)
 			{
-				dimensions.X = (int)Math.Max(minWidth, Game1.tileSize * 2 + font.MeasureString(this.ItemInGift.Value.DisplayName).X);
+				dimensions.X = (int)Math.Max(minWidth, Game1.tileSize * 2 + font.MeasureString(text).X);
 				dimensions.Y = startingHeight + Game1.tileSize + 8;
 			}
 
@@ -329,20 +335,42 @@ namespace GiftWrapper
 				alpha: alpha,
 				overrideText: overrideText);
 
+			float scale = 1;
+			string text = null;
+			Colour colour = ModEntry.Definitions.DefaultTextColour ?? Game1.textColor;
+			Vector2 position = new Vector2(x: x, y: y)
+				+ new Vector2(Game1.smallestTileSize)
+				+ new Vector2(4);
 			if (this.IsOwnerViewing && this.IsItemInside)
 			{
 				// Peek wrapped item if viewed by owner
-				Vector2 position = new Vector2(x: x, y: y) + new Vector2(Game1.smallestTileSize);
 				this.ItemInGift.Value.drawInMenu(
 					spriteBatch: spriteBatch,
-					location: position + new Vector2(4),
-					scaleSize: 1);
+					location: position,
+					scaleSize: scale);
+				text = this.ItemInGift.Value.DisplayName;
+			}
+			else if (Game1.getFarmerMaybeOffline(this.Owner.Value) is Farmer owner)
+			{
+				// Show owner
+				owner.FarmerRenderer.drawMiniPortrat(
+					b: spriteBatch,
+					layerDepth: 1,
+					position: position,
+					scale: scale * Game1.pixelZoom,
+					facingDirection: Game1.down,
+					who: owner);
+				text = owner.displayName;
+			}
+
+			if (text is not null)
+			{
 				Utility.drawTextWithShadow(
 					b: spriteBatch,
-					text: this.ItemInGift.Value.DisplayName,
+					text: text,
 					font: font,
 					position: position + new Vector2(x: Game1.tileSize * 1.25f, y: Game1.tileSize * 0.25f),
-					color: ModEntry.Definitions.SecretTextColour * alpha);
+					color: colour * alpha);
 			}
 		}
 

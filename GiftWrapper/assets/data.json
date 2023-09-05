@@ -46,6 +46,7 @@
             "B": 210,
             "A": 230
         },
+        "DefaultTextColour": null,
         "WrapItemTexture": "Mods/blueberry.GiftWrapperAssets/Wrap",
         "WrapItemSource": {
             "X": 0,
