@@ -11,7 +11,6 @@
 
 	"message.giftopened": "{{Recipient}} just opened a gift from {{Sender}}! It was {{ItemName}}.",
 	"message.giftopened_quantity": "{{Recipient}} just opened a gift from {{Sender}}! It was {{ItemQuantity}} {{ItemName}}.",
-	"message.giftwrapped": "{{WrappedGiftName}} ({{ItemName}})",
 
 	"error.location": "Can't place that here!",
 	"error.item.missing": "You don't have any {{WrapItemName}}!",
