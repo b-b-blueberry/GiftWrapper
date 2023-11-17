@@ -30,6 +30,7 @@
         "HitSound": "Mods.blueberry.GiftWrapper.TearPaper",
         "LastHitSound": "Mods.blueberry.GiftWrapper.Box",
         "OpenSound": "newRecord",
+        "RemoveSound": "hammer",
         "InvalidGiftStringPath": "Strings\\StringsFromCSFiles:Event.cs.1803",
         "InvalidGiftSound": "cancel",
         "EventConditionId": -4721,
@@ -174,7 +175,8 @@
             },
             "HitSound": "woodWhack",
             "LastHitSound": "barrelBreak",
-            "OpenSound": "newRecord"
+            "OpenSound": "newRecord",
+            "RemoveSound": "woodWhack"
         },
         "blueberry.gw.peppermint": {
             "Texture": null,

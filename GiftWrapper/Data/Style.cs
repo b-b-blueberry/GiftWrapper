@@ -25,6 +25,10 @@ namespace GiftWrapper.Data
 		/// </summary>
 		public string OpenSound;
 		/// <summary>
+		/// Sound cue played on item removed, upon tool hit.
+		/// </summary>
+		public string RemoveSound;
+		/// <summary>
 		/// Sound cue played on item picked up, without being hit.
 		/// </summary>
 		public string PickUpSound;

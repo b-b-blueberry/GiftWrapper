@@ -286,6 +286,8 @@ namespace GiftWrapper
 				debrisOrigin: this.TileLocation * Game1.tileSize,
 				targetLocation: Game1.player.GetBoundingBox().Center.ToVector2()));
 
+			Game1.playSound(this._style.RemoveSound ?? ModEntry.Definitions.RemoveSound);
+
 			return true;
 		}
 

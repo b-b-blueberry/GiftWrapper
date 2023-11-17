@@ -13,6 +13,7 @@ namespace GiftWrapper.Data
 		public string HitSound;
 		public string LastHitSound;
 		public string OpenSound;
+		public string RemoveSound;
 		public string InvalidGiftStringPath;
 		public string InvalidGiftSound;
 		public int EventConditionId;
