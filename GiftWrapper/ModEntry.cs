@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
+using Newtonsoft.Json;
 using SpaceCore.Events;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
@@ -23,11 +24,37 @@ namespace GiftWrapper
 		internal static Config Config;
 		internal static ITranslationHelper I18n => ModEntry.Instance.Helper.Translation;
 
+		/// <summary>
+		/// Mod definitions as loaded from data file.
+		/// Persists between sessions.
+		/// </summary>
 		internal static Definitions Definitions { get; private set; }
+		/// <summary>
+		/// Shop data definitions as loaded from data file for host player,
+		/// or from network message if client player.
+		/// Does not persist between sessions.
+		/// </summary>
+		internal static Shop[] Shops { get; private set; }
+		/// <summary>
+		/// GiftItem sprite definitions as loaded from data file.
+		/// Persists between sessions.
+		/// Not loaded until individually referenced.
+		/// </summary>
 		internal static Dictionary<string, Lazy<Texture2D>> GiftSprites { get; private set; }
+		/// <summary>
+		/// WrapItem sprite instance.
+		/// Persists between sessions.
+		/// Not loaded until referenced.
+		/// </summary>
 		internal static Lazy<Texture2D> WrapSprite { get; private set; } = new(ModEntry.LoadWrapTexture);
+		/// <summary>
+		/// Whether to use IfAlwaysAvailable shop data entries instead of usual.
+		/// Does not persist between sessions.
+		/// </summary>
+		internal static bool IsAlwaysAvailable { get; private set; }
 
 		public const string AssetPrefix = "blueberry.GiftWrapper.";
+		public const string ModDataPrefix = "blueberry.GiftWrapper.";
 		public const string ItemPrefix = "blueberry.gw.";
 		public const string WrapItemName = "wrap";
 		public const string GiftItemName = "gift";
@@ -43,22 +70,23 @@ namespace GiftWrapper
 		internal static readonly string LocalGiftTexturePath = Path.Combine("assets", "gifts");
 		internal static readonly string LocalMenuTexturePath = Path.Combine("assets", "menu-{0}");
 		internal static readonly string LocalCardTexturePath = Path.Combine("assets", "card");
+		internal static readonly string LocalBannerTexturePath = Path.Combine("assets", "banner");
 
 		internal static string LocalAudioPath => Path.Combine(ModEntry.Instance.Helper.DirectoryPath, "assets", "audio");
 
 
-		internal enum GiftType
+		/// <summary>
+		/// Message type values assigned to network messages in multiplayer.
+		/// </summary>
+		public enum MessageType
 		{
-			BedFurniture,
-			Furniture,
-			BigCraftable,
-			MeleeWeapon,
-			Hat,
-			Boots,
-			Clothing,
-			Ring,
-			Object
+			ReloadShops
 		}
+
+		/// <summary>
+		/// Class used for network messages in multiplayer.
+		/// </summary>
+		public class Message {}
 
 		public override void Entry(IModHelper helper)
 		{
@@ -98,6 +126,32 @@ namespace GiftWrapper
 			return true;
 		}
 
+		private static string Tokenised(string key, string[] contexts = null, string[] owners = null)
+		{
+			string friendship = ModEntry.Definitions is null
+				? string.Empty
+				: $" {(int)((ModEntry.Definitions.AddedFriendship - 1) * 100)}%";
+			string wrap = ModEntry.I18n.Get("item.giftwrap.name");
+			string gift = ModEntry.I18n.Get("item.wrappedgift.name");
+			string str = ModEntry.I18n.Get(key, new {
+				WrapItemName = wrap,
+				GiftItemName = gift,
+				OptionalFriendship = friendship,
+				Owners = owners is null
+					? string.Empty
+					: string.Join(", ", owners),
+				NumOwners = owners is null
+					? 0
+					: owners.Length,
+				NumOthers = contexts is null
+					? 0
+					: owners is null
+						? contexts.Length
+						: contexts.Length - owners.Length
+			});
+			return str;
+		}
+
 		private void RegisterGenericModConfigMenuPage()
 		{
 			IGenericModConfigMenuAPI api = this.Helper.ModRegistry.GetApi<IGenericModConfigMenuAPI>("spacechase0.GenericModConfigMenu");
@@ -116,6 +170,62 @@ namespace GiftWrapper
 				reset: () => ModEntry.Config = new Config(),
 				save: () => this.Helper.WriteConfig(ModEntry.Config));
 
+			api.AddImage(
+				mod: this.ModManifest,
+				texture: () => this.Helper.ModContent.Load<Texture2D>(ModEntry.LocalBannerTexturePath),
+				texturePixelArea: new(x: 0, y: 0, width: 106, height: 26));
+
+			api.AddSectionTitle(
+				mod: this.ModManifest,
+				text: () => ModEntry.I18n.Get("config.section.shops"));
+
+			api.AddParagraph(
+				mod: this.ModManifest,
+				text: () =>
+				{
+					string wrap = ModEntry.I18n.Get("item.giftwrap.name");
+					string gift = ModEntry.I18n.Get("item.wrappedgift.name");
+					string str = ModEntry.Tokenised("config.description.shopping");
+					if (ModEntry.Shops is Shop[] shops && Game1.currentLocation is GameLocation location)
+					{
+						var contexts = shops
+							.Where((Shop shop) => ModEntry.DoesShopPreconditionMatch(shop: shop, location: location) && shop.IfAlwaysAvailable == ModEntry.IsAlwaysAvailable)
+							.Select((Shop shop) => shop.Context)
+							.ToArray();
+						var owners = contexts
+							.Where((string context) => Game1.getCharacterFromName(context) is not null)
+							.ToArray();
+						if (owners.Any())
+						{
+							str += ModEntry.Tokenised("config.description.shopping.owners", owners: owners, contexts: contexts);
+							if (contexts.Length - owners.Length is int diff && diff > 0)
+							{
+								str += ModEntry.Tokenised("config.description.shopping.others", owners: owners, contexts: contexts);
+							}
+						}
+						else
+						{
+							str += ModEntry.Tokenised("config.description.shopping.none");
+						}
+					}
+
+					return str;
+				});
+
+			api.AddSectionTitle(
+				mod: this.ModManifest,
+				text: () => ModEntry.I18n.Get("config.section.description"));
+			
+			api.AddParagraph(
+				mod: this.ModManifest,
+				text: () => ModEntry.Tokenised("config.description.usage")
+					+ ModEntry.Tokenised("config.description.singleplayer")
+					+ ModEntry.Tokenised("config.description.multiplayer"));
+
+			api.AddSectionTitle(
+				mod: this.ModManifest,
+				text: () => ModEntry.I18n.Get("config.section.options"));
+			
 			// Themes
 			api.AddTextOption(
 				mod: this.ModManifest,
@@ -136,7 +246,14 @@ namespace GiftWrapper
 				name: () => ModEntry.I18n.Get("config.availableallyear.name"),
 				tooltip: () => ModEntry.I18n.Get("config.availableallyear.description"),
 				getValue: () => ModEntry.Config.AlwaysAvailable,
-				setValue: (bool value) => ModEntry.Config.AlwaysAvailable = value);
+				setValue: (bool value) =>
+				{
+					ModEntry.Config.AlwaysAvailable = value;
+					if (Context.IsOnHostComputer)
+					{
+						ModEntry.ReloadShops(isBroadcast: true);
+					}
+				});
 
 			// Animations
 			api.AddBoolOption(
@@ -145,6 +262,10 @@ namespace GiftWrapper
 				tooltip: () => ModEntry.I18n.Get("config.playanimations.description"),
 				getValue: () => ModEntry.Config.PlayAnimations,
 				setValue: (bool value) => ModEntry.Config.PlayAnimations = value);
+
+			api.AddSectionTitle(
+				mod: this.ModManifest,
+				text: () => ModEntry.I18n.Get("config.section.multiplayer"));
 
 			// Tooltip enabled
 			api.AddBoolOption(
@@ -163,14 +284,16 @@ namespace GiftWrapper
 				setValue: (int value) => ModEntry.Config.GiftPreviewTileRange = value);
 
 			// Tooltip fade
+			const int min = 1;
+			const int max = 20;
 			api.AddNumberOption(
 				mod: this.ModManifest,
 				name: () => ModEntry.I18n.Get("config.giftpreviewfadespeed.name"),
-				tooltip: () => ModEntry.I18n.Get("config.giftpreviewfadespeed.description"),
+				tooltip: () => ModEntry.I18n.Get("config.giftpreviewfadespeed.description", new { MinSpeed = min, MaxSpeed = max }),
 				getValue: () => ModEntry.Config.GiftPreviewFadeSpeed,
 				setValue: (int value) => ModEntry.Config.GiftPreviewFadeSpeed = value,
-				min: 1,
-				max: 20,
+				min: min,
+				max: max,
 				interval: 1);
 		}
 
@@ -184,7 +307,10 @@ namespace GiftWrapper
 
 			// Event handlers
 			this.Helper.Events.Content.AssetRequested += AssetManager.OnAssetRequested;
+			this.Helper.Events.GameLoop.SaveLoaded += this.OnSaveLoaded;
 			this.Helper.Events.Display.MenuChanged += this.OnMenuChanged;
+			this.Helper.Events.GameLoop.ReturnedToTitle += this.OnReturnedToTitle;
+			this.Helper.Events.Multiplayer.ModMessageReceived += this.OnMessageReceived;
 			SpaceEvents.BeforeGiftGiven += this.OnGiftGiven;
 
 			// Gift data
@@ -219,6 +345,40 @@ namespace GiftWrapper
 			harmony.Patch(
 				original: AccessTools.Method(type: typeof(Event), name: nameof(Event.chooseSecretSantaGift)),
 				prefix: new HarmonyMethod(methodType: typeof(ModEntry), methodName: nameof(ModEntry.TrySecretSantaGift)));
+		}
+
+		/// <summary>
+		/// Interactions for data receiving.
+		/// </summary>
+		private void OnMessageReceived(object sender, ModMessageReceivedEventArgs e)
+		{
+			if (e.FromModID == this.ModManifest.UniqueID && e.Type == MessageType.ReloadShops.ToString())
+			{
+				// Reload if notified by other players of shop data changes
+				ModEntry.ReloadShops(isBroadcast: false);
+			}
+		}
+
+		/// <summary>
+		/// Interactions for session data.
+		/// </summary>
+		private void OnReturnedToTitle(object sender, ReturnedToTitleEventArgs e)
+		{
+			// Reset data for all unique instances of this mod
+			// Splitscreen clients are ignored here,
+			// as they share the data of the host player
+			if (Context.IsMainPlayer || !Context.IsOnHostComputer)
+			{
+				ModEntry.ResetSessionData();
+			}
+		}
+
+		/// <summary>
+		/// Interactions for data sharing.
+		/// </summary>
+		private void OnSaveLoaded(object sender, SaveLoadedEventArgs e)
+		{
+			ModEntry.ReloadShops(isBroadcast: false);
 		}
 
 		/// <summary>
@@ -288,6 +448,76 @@ namespace GiftWrapper
 					i = gift.ItemInGift.Value;
 				}
 			}
+		}
+
+		/// <summary>
+		/// Regenerates shop data based on config files.
+		/// </summary>
+		/// <param name="isBroadcast">Whether to notify online farmers of shop data changes.</param>
+		private static void ReloadShops(bool isBroadcast)
+		{
+			const string shopKey = ModEntry.ModDataPrefix + "Shops";
+			const string availabilityKey = ModEntry.ModDataPrefix + "AlwaysAvailable";
+
+			// Load mod definitions for all unique instances of this mod
+			// i.e. host computer and each client
+
+			string str;
+			Data.Data data = ModEntry.Instance.Helper.GameContent.Load<Data.Data>(ModEntry.GameContentDataPath);
+			if (Context.IsMainPlayer)
+			{
+				// Master player defines the values for a game session,
+				// which are broadcast to farmhands via the player's ModData field
+
+				// Shops
+				ModEntry.Shops = data.Shops;
+				string json = JsonConvert.SerializeObject(data.Shops);
+				Game1.player.modData[shopKey] = json;
+
+				// Availability
+				Game1.player.modData[ModEntry.ModDataPrefix + availabilityKey] = ModEntry.Config.AlwaysAvailable.ToString();
+			}
+			else if (!Context.IsOnHostComputer)
+			{
+				// Remote players defer to master player for mod definitions,
+				// fetching from the master player's ModData field whenever possible
+
+				// Shops
+				ModEntry.Shops = Game1.MasterPlayer.modData.TryGetValue(shopKey, out str)
+					&& JsonConvert.DeserializeObject<Shop[]>(str) is Shop[] shops
+					? shops
+					: data.Shops;
+
+				// Availability
+				ModEntry.IsAlwaysAvailable = Game1.MasterPlayer.modData.TryGetValue(availabilityKey, out str)
+					&& bool.TryParse(str, out bool isAlwaysAvailable)
+					? isAlwaysAvailable
+					: ModEntry.Config.AlwaysAvailable;
+			}
+
+			if (isBroadcast)
+			{
+				// Notify other instances of this mod that shop data has changed
+				long[] farmerIDs = Game1.getOnlineFarmers()
+					.Select((Farmer farmer) => farmer.UniqueMultiplayerID)
+					.Where((long id) => id != Game1.player.UniqueMultiplayerID)
+					.ToArray();
+				ModEntry.Instance.Helper.Multiplayer.SendMessage<Message>(
+					message: new Message(),
+					messageType: MessageType.ReloadShops.ToString(),
+					modIDs: new[] { ModEntry.Instance.ModManifest.UniqueID },
+					playerIDs: farmerIDs);
+			}
+		}
+
+		/// <summary>
+		/// Clears data relevant to the last-played saved game
+		/// to prevent it appearing out of context.
+		/// </summary>
+		private static void ResetSessionData()
+		{
+			ModEntry.Shops = null;
+			ModEntry.IsAlwaysAvailable = false;
 		}
 
 		/// <summary>
@@ -361,16 +591,20 @@ namespace GiftWrapper
 
 		public static Shop IsShopAllowed(ShopMenu menu, GameLocation location)
 		{
-			Data.Data data = ModEntry.Instance.Helper.GameContent.Load<Data.Data>(ModEntry.GameContentDataPath);
-			int id = data.Definitions.EventConditionId;
-			return data.Shops.FirstOrDefault((Shop shop)
+			return ModEntry.Shops?.FirstOrDefault((Shop shop)
 				=> (shop.Context is null
 					|| shop.Context == menu.storeContext
 					|| shop.Context == menu.portraitPerson?.Name)
-				&& (shop.Conditions is null
+				&& ModEntry.DoesShopPreconditionMatch(shop: shop, location: location)
+				&& shop.IfAlwaysAvailable == ModEntry.IsAlwaysAvailable);
+		}
+
+		public static bool DoesShopPreconditionMatch(Shop shop, GameLocation location)
+		{
+			int id = ModEntry.Definitions.EventConditionId;
+			return shop.Conditions is null
 					|| shop.Conditions.Length == 0
-					|| shop.Conditions.Any((string s) => location.checkEventPrecondition($"{id}/{s}") == id))
-				&& shop.IfAlwaysAvailable == ModEntry.Config.AlwaysAvailable);
+					|| shop.Conditions.Any((string s) => location.checkEventPrecondition($"{id}/{s}") == id);
 		}
 	}
 }
