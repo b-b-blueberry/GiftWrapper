@@ -171,6 +171,20 @@ namespace GiftWrapper
 
 		// Items
 
+		public enum ChangeItem
+		{
+			Add,
+			Remove
+		}
+
+		public enum ChangeQuantity
+		{
+			None,
+			One,
+			Half,
+			All
+		}
+
 		/// <summary>
 		/// Clickable container to display items placed by the user for turning into wrapped gifts.
 		/// </summary>
@@ -192,9 +206,26 @@ namespace GiftWrapper
 		public int StyleIndex;
 
 		/// <summary>
+		/// Shorthand method to fetch an inventory item at a given index, row-major traversal.
+		/// </summary>
+		public Item ItemAt(int index) => this.inventory.actualInventory.ElementAtOrDefault(index);
+		/// <summary>
 		/// Item instance currently in the ItemSlot container to be wrapped.
 		/// </summary>
-		public Item ItemToWrap;
+		public Item ItemToWrap { get => this.ItemAt(this.ItemIndex ?? -1); }
+		/// <summary>
+		/// Instance of gift to create on crafting complete, with the chosen <see cref="ItemToWrap"/> as its contents.
+		/// </summary>
+		public GiftItem GiftItem;
+
+		/// <summary>
+		/// Selected item from available inventory used for <see cref="ItemToWrap"/>.
+		/// </summary>
+		public int? ItemIndex;
+		/// <summary>
+		/// Selected quantity to wrap from available stack of <see cref="ItemToWrap"/>.
+		/// </summary>
+		public int ItemQuantity;
 
 		/// <summary>
 		/// Whether to have the contextual clickable gift wrap confirm button be visible and interactible.
@@ -204,6 +235,14 @@ namespace GiftWrapper
 		/// Whether to have the contextual close button be visible and interactible.
 		/// </summary>
 		public bool IsCloseButtonAllowed { get => !Game1.options.SnappyMenus && this._crafting.Step == CraftingAnimation.Steps.Idle; }
+		/// <summary>
+		/// Whether item tooltips will be drawn on hovering item slot or inventory.
+		/// </summary>
+		public bool IsItemTooltipAllowed { get => !Game1.input.GetKeyboardState().IsKeyDown(Keys.LeftAlt) && this.hoveredItem is not null; }
+		/// <summary>
+		/// Whether quantity key is currently down, affecting stack changes on item to wrap.
+		/// </summary>
+		public bool IsAlternateQuantityMode { get => Game1.input.GetKeyboardState().IsKeyDown(Keys.LeftShift); }
 
 		// Animations
 
@@ -310,7 +349,10 @@ namespace GiftWrapper
 			this._cardTexture = ModEntry.Instance.Helper.GameContent.Load<Texture2D>(this.UI.CardSpriteSheetPath);
 			this._wrapButtonTexture = ModEntry.Instance.Helper.GameContent.Load<Texture2D>(this.UI.WrapButtonSpriteSheetPath);
 			this._infoText = this.UI.InfoTextPath is null || this.UI.InfoTextKey is null || !ModEntry.Instance.Helper.GameContent.Load<Dictionary<string, string>>(this.UI.InfoTextPath).TryGetValue(this.UI.InfoTextKey, out string str) || str is null
-				? ModEntry.I18n.Get("menu.infopanel.body")
+				? ModEntry.I18n.Get("menu.infopanel.body", new {
+					WrapItemName = ModEntry.I18n.Get("item.giftwrap.name"),
+					GiftItemName = ModEntry.I18n.Get("item.wrappedgift.name")
+				})
 				: str;
 
 			// Crafting fields
@@ -383,21 +425,35 @@ namespace GiftWrapper
 			}
 		}
 
-		private bool TryRemoveWrapItemFromInventory()
+		private bool TryCreateAndRemoveItemsFromInventory()
 		{
-			// Require wrap item in inventory on wrap
+			// Require item and wrap in inventory on wrap
 			int index = Game1.player.Items.IndexOf(Game1.player.Items.FirstOrDefault((Item item) => item is WrapItem));
-			bool isFound = index >= 0;
-			if (isFound)
+			Item item = this.ItemAt(this.ItemIndex.Value);
+			bool isCraftable = item is not null && index >= 0;
+
+			if (isCraftable)
 			{
-				// Remove gift wrap from inventory
+				// Create gift from item and wrap
+				Item gift = this.ItemToWrap.getOne();
+				gift.Stack = this.ItemQuantity;
+				this.GiftItem = new(
+					owner: Game1.player.UniqueMultiplayerID,
+					style: this.Styles[this.StyleIndex].ID,
+					item: gift);
+
+				// Remove quantity from item and wrap
+				if ((item.Stack -= this.ItemQuantity) <= 0)
+				{
+					Game1.player.removeItemFromInventory(which: item);
+				}
 				if (--Game1.player.Items[index].Stack <= 0)
 				{
 					Game1.player.removeItemFromInventory(whichItemIndex: index);
 				}
 			}
 
-			return isFound;
+			return isCraftable;
 		}
 
 		private void NotifyMissingWrapItem(bool playSound)
@@ -411,7 +467,7 @@ namespace GiftWrapper
 			}
 		}
 
-		private void CreateItemAndCloseMenu(bool playSound)
+		private void AddGiftItem(bool playSound)
 		{
 			// Sounds
 			if (playSound)
@@ -419,38 +475,37 @@ namespace GiftWrapper
 				Game1.playSound(this.UI.SuccessSound);
 			}
 
-			// Wrap item
-			GiftItem gift = new(
-				owner: Game1.player.UniqueMultiplayerID,
-				style: this.Styles[this.StyleIndex].ID,
-				item: this.ItemToWrap);
-			this.ItemToWrap = null;
-
 			// Give gift to player or throw on ground
-			if (!Game1.player.addItemToInventoryBool(item: gift))
+			if (!Game1.player.addItemToInventoryBool(item: this.GiftItem))
 			{
-				Game1.createItemDebris(item: gift, origin: Game1.player.Position, direction: -1);
+				Game1.createItemDebris(item: this.GiftItem, origin: Game1.player.Position, direction: -1);
 			}
 
-			// Close menu
-			this.exitThisMenuNoSound();
+			this.GiftItem = null;
 		}
 
 		private void OnCraftingAnimationEnd(bool isAnimated)
 		{
-			this.CreateItemAndCloseMenu(playSound: !isAnimated);
+			this.AddGiftItem(playSound: !isAnimated);
+
+			// Close menu
+			this.exitThisMenuNoSound();
 		}
 
 		private string GetSoundFor(Item item)
 		{
 			string cue = this.UI.ItemSounds.TryGetValue(item.Name, out var key)
 				? key
-				: this.UI.CategorySounds.Keys.FirstOrDefault((string key) => this.UI.CategorySounds[key].Contains(item.Category));
+				: this.UI.CategorySounds.Keys.FirstOrDefault((string key)
+					=> this.UI.CategorySounds[key].Contains(item.Category));
 			return cue ?? this.UI.ItemSound;
 		}
 
 		private void ShakeAndSoundFor(Item item)
 		{
+			if (item is null)
+				return;
+			
 			string sound = this.GetSoundFor(item);
 			Game1.playSound(sound);
 			if (this.UI.ShakeCategories.Contains(item.Category))
@@ -521,18 +576,88 @@ namespace GiftWrapper
 			this.StyleButton.sourceRect = style.Area;
 		}
 
+		private void TryChangeItemToWrap(Item item, int index, ChangeItem changeItem, ChangeQuantity changeQuantity)
+		{
+			(int oldIndex, int oldQuantity) = (this.ItemIndex ?? -1, this.ItemQuantity);
+
+			int quantity()
+			{
+				return changeItem switch
+				{
+					ChangeItem.Add => changeQuantity switch
+					{
+						ChangeQuantity.All => item.Stack,
+						ChangeQuantity.Half => (int)Math.Ceiling((item.Stack - this.ItemQuantity) * 0.5f),
+						ChangeQuantity.One => 1,
+						_ => 0
+					},
+					ChangeItem.Remove => changeQuantity switch
+					{
+						ChangeQuantity.All => this.ItemQuantity,
+						ChangeQuantity.Half => -(changeQuantity is ChangeQuantity.Half ? (int)Math.Ceiling(this.ItemQuantity * 0.5f) : 1),
+						ChangeQuantity.One => -1,
+						_ => 0
+					},
+					_ => 0
+				};
+			}
+
+			if (item is null)
+			{
+				// Remove item
+				this.ResetItemToWrap(playSound: true);
+			}
+			else if (!ModEntry.IsItemAllowed(item))
+			{
+				// Block item
+				Game1.playSound(this.UI.FailureSound);
+				return;
+			}
+			else if (this.ItemIndex == index)
+			{
+				// Change quantity
+				this.ItemQuantity = Math.Clamp(
+					value: this.ItemQuantity + quantity(),
+					min: 0,
+					max: this.ItemToWrap.Stack);
+				if (this.ItemQuantity < 1)
+				{
+					this.ResetItemToWrap(playSound: true);
+				}
+			}
+			else
+			{
+				// Set item
+				this.ItemIndex = index;
+				this.ItemQuantity = 0;
+				this.ItemQuantity = quantity();
+			}
+
+			if (this.ItemToWrap is not null && (this.ItemIndex != oldIndex || this.ItemQuantity != oldQuantity))
+			{
+				this.ShakeAndSoundFor(item);
+			}
+		}
+
+		private void ResetItemToWrap(bool playSound)
+		{
+			if (playSound && this.ItemToWrap is not null)
+			{
+				Game1.playSound(this.GetSoundFor(this.ItemToWrap));
+			}
+			this.ItemIndex = null;
+			this.ItemQuantity = 0;
+		}
+
 		protected override void cleanupBeforeExit()
 		{
 			// Allow player input
 			Game1.freezeControls = false;
 
-			if (this.ItemToWrap is not null)
+			if (this.GiftItem is not null && ModEntry.Config.PlayAnimations)
 			{
-				// Return items in item slot to player when closing
-				Game1.createItemDebris(
-					item: this.ItemToWrap,
-					origin: Game1.player.Position,
-					direction: -1);
+				// Complete crafting if ended prematurely somehow
+				this.AddGiftItem(playSound: false);
 			}
 
 			base.cleanupBeforeExit();
@@ -637,18 +762,9 @@ namespace GiftWrapper
 			if (Game1.freezeControls)
 				return;
 
-			if (this.ItemSlot.containsPoint(x, y) && this.ItemToWrap is not null)
+			if (this.ItemSlot.containsPoint(x, y))
 			{
-				if (this.inventory.tryToAddItem(toPlace: this.ItemToWrap, sound: playSound ? this.GetSoundFor(this.ItemToWrap) : null) is null)
-				{
-					// Take all from wrapping
-					this.ItemToWrap = null;
-				}
-				else
-				{
-					// Inventory couldn't take all
-					Game1.playSound(this.UI.FailureSound);
-				}
+				this.ResetItemToWrap(playSound: true);
 			}
 			else if (this.StyleButton.containsPoint(x, y))
 			{
@@ -658,7 +774,7 @@ namespace GiftWrapper
 			else if (this.WrapButton.containsPoint(x, y) && this.IsWrapButtonAllowed && this.ItemToWrap is not null)
 			{
 				// Handle items and menu behaviours on wrap
-				if (this.TryRemoveWrapItemFromInventory())
+				if (this.TryCreateAndRemoveItemsFromInventory())
 				{
 					if (ModEntry.Config.PlayAnimations)
 						this._crafting.Start(endFunc: this.OnCraftingAnimationEnd);
@@ -670,24 +786,13 @@ namespace GiftWrapper
 					this.NotifyMissingWrapItem(playSound: true);
 				}
 			}
-			else if (this.inventory.getInventoryPositionOfClick(x, y) is int index && this.inventory.actualInventory.ElementAtOrDefault(index) is Item item && ModEntry.IsItemAllowed(item))
+			else if (this.inventory.getInventoryPositionOfClick(x, y) is int index && this.ItemAt(index) is Item item)
 			{
-				if (this.ItemToWrap is not null && this.ItemToWrap.canStackWith(item))
-				{
-					// Try add all to wrapping
-					int maximumToSend = Math.Min(this.inventory.actualInventory[index].Stack, this.ItemToWrap.maximumStackSize() - this.ItemToWrap.Stack);
-					this.ItemToWrap.Stack += maximumToSend;
-					this.inventory.actualInventory[index].Stack -= maximumToSend;
-					if (this.inventory.actualInventory[index].Stack < 1)
-						this.inventory.actualInventory[index] = null;
-					this.ShakeAndSoundFor(item);
-				}
-				else
-				{
-					// Add all to wrapping
-					(this.ItemToWrap, this.inventory.actualInventory[index]) = (this.inventory.actualInventory[index], this.ItemToWrap);
-					this.ShakeAndSoundFor(item);
-				}
+				this.TryChangeItemToWrap(
+					item: item,
+					index: index,
+					changeItem: ChangeItem.Add,
+					changeQuantity: ChangeQuantity.All);
 			}
 			else if (this.IsCloseButtonAllowed && this.upperRightCloseButton.containsPoint(x, y))
 			{
@@ -703,60 +808,24 @@ namespace GiftWrapper
 
 			if (this.ItemSlot.containsPoint(x, y) && this.ItemToWrap is not null)
 			{
-				if (this.inventory.tryToAddItem(toPlace: this.ItemToWrap.getOne(), sound: this.GetSoundFor(this.ItemToWrap)) is null)
-				{
-					// Take one from wrapping
-					if (this.ItemToWrap.maximumStackSize() <= 1 || --this.ItemToWrap.Stack < 1)
-						this.ItemToWrap = null;
-				}
-				else
-				{
-					// Inventory couldn't take one
-					Game1.playSound(this.UI.FailureSound);
-				}
+				this.TryChangeItemToWrap(
+					item: this.ItemToWrap,
+					index: this.ItemIndex.Value,
+					changeItem: ChangeItem.Remove,
+					changeQuantity: this.IsAlternateQuantityMode ? ChangeQuantity.Half : ChangeQuantity.One);
 			}
 			else if (this.StyleButton.containsPoint(x, y))
 			{
 				// Use previous style
 				this.ChangeStyle(isNext: false);
 			}
-			else if (this.inventory.getInventoryPositionOfClick(x, y) is int index && this.inventory.actualInventory.ElementAtOrDefault(index) is Item item && ModEntry.IsItemAllowed(item))
+			else if (this.inventory.getInventoryPositionOfClick(x, y) is int index && this.ItemAt(index) is Item item)
 			{
-				bool movedOne = false;
-				if (this.ItemToWrap is not null)
-				{
-					// Add one to wrapping
-					if (this.ItemToWrap.canStackWith(item))
-					{
-						++this.ItemToWrap.Stack;
-						movedOne = true;
-					}
-					// Take all of wrapping and add one to wrap
-					else if (this.inventory.tryToAddItem(toPlace: this.ItemToWrap, sound: this.UI.NoSound) is null)
-					{
-						this.ItemToWrap = item.getOne();
-						movedOne = true;
-					}
-				}
-				else
-				{
-					// Add one to wrapping
-					this.ItemToWrap = item.getOne();
-					movedOne = true;
-				}
-
-				if (movedOne)
-				{
-					// Take one from inventory
-					if (this.inventory.actualInventory[index].maximumStackSize() <= 1 || --this.inventory.actualInventory[index].Stack < 1)
-						this.inventory.actualInventory[index] = null;
-					this.ShakeAndSoundFor(item);
-				}
-				else
-				{
-					// None were moved
-					Game1.playSound(this.UI.FailureSound);
-				}
+				this.TryChangeItemToWrap(
+					item: item,
+					index: index,
+					changeItem: ChangeItem.Add,
+					changeQuantity: this.IsAlternateQuantityMode ? ChangeQuantity.Half : ChangeQuantity.One);
 			}
 		}
 
@@ -1117,18 +1186,42 @@ namespace GiftWrapper
 						layerDepth: 1);
 
 					// Item in slot
-					this.ItemToWrap?.drawInMenu(
-						spriteBatch: b,
-						location: this.ItemSlot.bounds.Location.ToVector2()
+					Item item = this.GiftItem?.ItemInGift ?? this.ItemToWrap;
+					Vector2 position = this.ItemSlot.bounds.Location.ToVector2()
 							+ new Vector2(x: 0, y: this._crafting.Offset)
-							+ (this.ItemSlot.bounds.Size.ToVector2() - new Vector2(Game1.tileSize)) / 2
+							+ (this.ItemSlot.bounds.Size.ToVector2() - new Vector2(Game1.tileSize)) / 2;
+					item?.drawInMenu(
+						spriteBatch: b,
+						location: position
 							+ (this._crafting.Step == CraftingAnimation.Steps.Shake
 								? new Vector2(
 									x: Game1.random.Next(-2, 2),
 									y: Game1.random.Next(-2, 2))
 								: Vector2.Zero)
 							+ this._itemSlotShakeVector,
-						scaleSize: (this.ItemSlot.scale + this._crafting.Scale) / this.UI.Scale);
+						scaleSize: (this.ItemSlot.scale + this._crafting.Scale) / this.UI.Scale,
+						transparency: 1,
+						layerDepth: 1,
+						drawStackNumber: StackDrawType.HideButShowQuality,
+						color: Colour.White,
+						drawShadow: false);
+
+					// Item quantity
+					if (item?.maximumStackSize() > 1)
+					{
+						float tinyScale = 3;
+						Utility.drawTinyDigits(
+						toDraw: this.ItemQuantity,
+							b: b,
+							position: position
+								+ new Vector2(Game1.tileSize)
+								- new Vector2(
+									x: Utility.getWidthOfTinyDigitString(toDraw: this.ItemQuantity, scale: tinyScale) + tinyScale,
+									y: 18),
+							scale: tinyScale,
+							layerDepth: 1,
+							c: Colour.White);
+					}
 				}
 
 				if (this.StyleButton.visible)
@@ -1193,7 +1286,7 @@ namespace GiftWrapper
 				}
 
 				// Tooltips
-				if (this.hoveredItem is not null)
+				if (this.IsItemTooltipAllowed)
 				{
 					IClickableMenu.drawToolTip(
 						b: b,
@@ -1278,19 +1371,45 @@ namespace GiftWrapper
 				// Item icons
 				if (this.inventory.actualInventory.ElementAtOrDefault(i) is Item item)
 				{
+					bool isStackable = item.maximumStackSize() > 1;
+					bool isAlternateStackDraw = this.GiftItem is null && this.ItemIndex == i && isStackable;
+					bool isItemStackedOut = !isStackable || (isAlternateStackDraw && item.Stack == this.ItemQuantity);
 					Colour colour = ModEntry.IsItemAllowed(item) ? Colour.White : this.UI.InventoryInvalidGiftColour;
 					bool drawShadow = this.inventory.highlightMethod(item);
+					float scaleSize = this.inventory.inventory.Count > i ? this.inventory.inventory[i].scale : 1;
+					float alpha = !this.inventory.highlightMethod(item) || (this.ItemIndex == i && isItemStackedOut) ? 0.25f : 1;
+					float layerDepth = 0.865f;
 					if (iconShakeTimer.ContainsKey(i))
 						position += 1 * new Vector2(Game1.random.Next(-1, 2), Game1.random.Next(-1, 2));
+
 					item.drawInMenu(
 						spriteBatch: b,
 						location: position,
-						scaleSize: this.inventory.inventory.Count > i ? this.inventory.inventory[i].scale : 1,
-						transparency: !this.inventory.highlightMethod(item) ? 0.25f : 1,
-						layerDepth: 0.865f,
-						drawStackNumber: StackDrawType.Draw,
+						scaleSize: scaleSize,
+						transparency: alpha,
+						layerDepth: layerDepth,
+						drawStackNumber: isAlternateStackDraw ? StackDrawType.HideButShowQuality : StackDrawType.Draw,
 						color: colour,
 						drawShadow: drawShadow);
+
+					if (isAlternateStackDraw)
+					{
+						// Item quantity
+						int toDraw = item.Stack - this.ItemQuantity;
+						float tinyScale = 3 * scaleSize;
+						Utility.drawTinyDigits(
+						toDraw: toDraw,
+							b: b,
+							position: position
+								+ new Vector2(Game1.tileSize)
+								+ new Vector2(2f, 1f) * tinyScale
+								- new Vector2(
+									x: Utility.getWidthOfTinyDigitString(toDraw: toDraw, scale: tinyScale) + tinyScale,
+									y: 18 * scaleSize + 1),
+							scale: tinyScale,
+							layerDepth: 1,
+							c: this.UI.CraftingSparkleColours.ElementAtOrDefault((int)ModEntry.Config.Theme - 1));
+					}
 				}
 			}
 		}
