@@ -15,7 +15,7 @@
 	"error.location": "Can't place that here!",
 	"error.item.missing": "You don't have any {{WrapItemName}}!",
 
-	"menu.infopanel.body": "Pick an item to hide it in a {{GiftItemName}}!\n\nGift it to a friend or use it as home decor!\nOnly normal items can be gifted to villagers, one at a time.\n\nUnwrap a placed gift by interacting with it!",
+	"menu.infopanel.body": "Pick an item to hide it in a {{GiftItemName}}!\n\nGift it to a friend or use it as home decor!\nOnly normal items can be gifted to villagers, only in stacks of 1.\n\nUnwrap a placed gift by interacting with it!",
 
 	"config.section.description": "How it works",
 	"config.section.shops": "Where to buy",
