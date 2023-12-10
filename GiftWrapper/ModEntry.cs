@@ -53,10 +53,25 @@ namespace GiftWrapper
 		/// </summary>
 		internal static bool IsAlwaysAvailable { get; private set; }
 
+		/// <summary>
+		/// Prefix used for unique ID of most/all asset keys.
+		/// </summary>
 		public const string AssetPrefix = "blueberry.GiftWrapper.";
+		/// <summary>
+		/// Prefix used for unique ID of ModData dictionary keys.
+		/// </summary>
 		public const string ModDataPrefix = "blueberry.GiftWrapper.";
+		/// <summary>
+		/// Prefix used for unique ID of all custom items added by this mod.
+		/// </summary>
 		public const string ItemPrefix = "blueberry.gw.";
+		/// <summary>
+		/// Unique ID after prefix of WrapItem.
+		/// </summary>
 		public const string WrapItemName = "wrap";
+		/// <summary>
+		/// Unique ID after prefix of GiftItem.
+		/// </summary>
 		public const string GiftItemName = "gift";
 
 		internal static readonly string GameContentDataPath = Path.Combine("Mods", ModEntry.AssetPrefix + "Assets", "Data");
