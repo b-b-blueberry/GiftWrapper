@@ -490,7 +490,8 @@ namespace GiftWrapper
 				Game1.player.modData[shopKey] = json;
 
 				// Availability
-				Game1.player.modData[ModEntry.ModDataPrefix + availabilityKey] = ModEntry.Config.AlwaysAvailable.ToString();
+				ModEntry.IsAlwaysAvailable = ModEntry.Config.AlwaysAvailable;
+				Game1.player.modData[ModEntry.ModDataPrefix + availabilityKey] = ModEntry.IsAlwaysAvailable.ToString();
 			}
 			else if (!Context.IsOnHostComputer)
 			{
