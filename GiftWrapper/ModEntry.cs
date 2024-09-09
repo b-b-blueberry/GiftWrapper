@@ -443,6 +443,12 @@ namespace GiftWrapper
 
 				// Remove wrapped gift from inventory
 				Game1.player.removeItemFromInventory(e.Gift);
+
+				// Replace wrapped gift with leftover item stack
+				if (--item.Stack > 0)
+				{
+					Game1.player.addItemToInventory(item);
+				}
 			}
 		}
 
@@ -604,7 +610,7 @@ namespace GiftWrapper
 
 		public static bool IsNpcGiftAllowed(Item item)
 		{
-			return item is Object o && o.canBeGivenAsGift() && o.Stack == 1;
+			return item is Object o && o.canBeGivenAsGift();
 		}
 
 		public static Shop IsShopAllowed(ShopMenu menu, GameLocation location)
