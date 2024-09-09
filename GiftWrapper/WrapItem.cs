@@ -12,6 +12,11 @@ namespace GiftWrapper
 	[XmlType("Mods_blueberry_GiftWrapper_WrapItem")]
 	public class WrapItem : Object
 	{
+		/// <summary>
+		/// Overrides <see cref="StardewValley.Objects.IndoorPot.TypeDefinitionId"/> to use custom qualifier.
+		/// </summary>
+		public override string TypeDefinitionId => WrapItemDataDefinition.TypeDefinitionId;
+
 		public WrapItem() : base() 
 		{
 			// Item values
@@ -28,7 +33,6 @@ namespace GiftWrapper
 		public override string DisplayName
 		{
 			get => ModEntry.I18n.Get("item.giftwrap.name");
-			set {}
 		}
 
 		public override string getCategoryName()
@@ -49,9 +53,14 @@ namespace GiftWrapper
 				width: this.getDescriptionWidth());
 		}
 
-		public override Item getOne()
+		protected override Item GetOneNew()
 		{
 			return new WrapItem();
+		}
+
+		protected override void GetOneCopyFrom(Item source)
+		{
+			base.GetOneCopyFrom(source);
 		}
 
 		public override bool performUseAction(GameLocation location)
@@ -156,19 +165,19 @@ namespace GiftWrapper
 				b: spriteBatch,
 				globalX: Game1.viewport.X + (int)objectPosition.X,
 				globalY: Game1.viewport.Y + (int)objectPosition.Y,
-				layerDepth: Math.Max(0, (f.getStandingY() + 3) / 10000f));
+				layerDepth: Math.Max(0, (f.StandingPixel.Y + 3) / 10000f));
 		}
 
 		public override void drawAsProp(SpriteBatch b)
 		{
 			Vector2 position = this.TileLocation * Game1.tileSize
 				+ new Vector2(Game1.tileSize / 2)
-				- Game1.viewport.ToXna().Location.ToVector2();
+				- new Vector2(x: Game1.viewport.X, y: Game1.viewport.Y);
 			this.DrawWrapItem(
 				b: b,
 				globalX: (int)position.X,
 				globalY: (int)position.Y,
-				layerDepth: this.getBoundingBox(this.TileLocation).Bottom / 15000f);
+				layerDepth: this.boundingBox.Value.Bottom / 15000f);
 		}
 
 		public void DrawWrapItem(SpriteBatch b, int globalX, int globalY, float alpha = 1, float layerDepth = 1, bool drawShadow = true, bool isInWorld = false)
@@ -191,7 +200,7 @@ namespace GiftWrapper
 				position = new Vector2(Game1.tileSize / 2)
 					+ new Vector2(x: globalX, y: globalY)
 					+ new Vector2(x: 0, y: 16 + 3 + 4)
-					- Game1.viewport.ToXna().Location.ToVector2();
+					- new Vector2(x: Game1.viewport.X, y: Game1.viewport.Y);
 				b.Draw(
 					texture: Game1.shadowTexture,
 					position: position,
@@ -215,7 +224,7 @@ namespace GiftWrapper
 						x: Game1.random.Next(-2, 2),
 						y: Game1.random.Next(-2, 2))
 					: Vector2.Zero)
-				- Game1.viewport.ToXna().Location.ToVector2();
+				- new Vector2(x: Game1.viewport.X, y: Game1.viewport.Y);
 			b.Draw(
 				texture: ModEntry.WrapSprite.Value,
 				position: position,

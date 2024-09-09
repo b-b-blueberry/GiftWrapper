@@ -128,6 +128,7 @@ namespace GiftWrapper
 					("spacechase0.SpaceCore");
 				spacecoreApi.RegisterSerializerType(typeof(GiftItem));
 				spacecoreApi.RegisterSerializerType(typeof(WrapItem));
+				ItemRegistry.AddTypeDefinition(new WrapItemDataDefinition());
 			}
 			catch (Exception e)
 			{
@@ -205,7 +206,7 @@ namespace GiftWrapper
 					{
 						var contexts = shops
 							.Where((Shop shop) => ModEntry.DoesShopPreconditionMatch(shop: shop, location: location) && shop.IfAlwaysAvailable == ModEntry.IsAlwaysAvailable)
-							.Select((Shop shop) => shop.Context)
+							.Select((Shop shop) => shop.ShopId)
 							.ToArray();
 						var owners = contexts
 							.Where((string context) => Game1.getCharacterFromName(context) is not null)
@@ -413,11 +414,9 @@ namespace GiftWrapper
 		/// </summary>
 		private void OnGiftGiven(object sender, EventArgsBeforeReceiveObject e)
 		{
-			// Ignore NPC gifts that aren't going to be accepted
-			if (!ModEntry.IsNpcAllowed(player: Game1.player, npc: e.Npc, gift: e.Gift))
-				return;
-
-			if (e.Gift is GiftItem gift)
+			if (!e.Probe
+				&& e.Gift is GiftItem gift
+				&& ModEntry.IsNpcAllowed(player: Game1.player, npc: e.Npc, gift: e.Gift))
 			{
 				// Cancel the wrapped gift NPC gift
 				e.Cancel = true;
@@ -521,7 +520,7 @@ namespace GiftWrapper
 				ModEntry.Instance.Helper.Multiplayer.SendMessage<Message>(
 					message: new Message(),
 					messageType: MessageType.ReloadShops.ToString(),
-					modIDs: new[] { ModEntry.Instance.ModManifest.UniqueID },
+					modIDs: [ModEntry.Instance.ModManifest.UniqueID],
 					playerIDs: farmerIDs);
 			}
 		}
@@ -551,7 +550,7 @@ namespace GiftWrapper
 				=> menu.forSale.Any((ISalable i) => i.Name == name))
 				is string name ? menu.forSale.FindIndex((ISalable i) => i.Name == name) + 1 : 0;
 
-			menu.itemPriceAndStock.Add(item, new int[] { priceRounded, int.MaxValue });
+			menu.itemPriceAndStock.Add(item, new ItemStockInformation(price: priceRounded, stock: int.MaxValue));
 			if (index >= 0)
 				menu.forSale.Insert(index, item);
 			else
@@ -575,29 +574,32 @@ namespace GiftWrapper
 
 		public static bool IsItemAllowed(Item item)
 		{
-			return item is not (null or WrapItem or GiftItem) && item.canBeTrashed();
+			return item is not (null or WrapItem or GiftItem)
+				&& item.canBeTrashed();
 		}
 
 		public static bool IsLocationAllowed(GameLocation location)
 		{
 			return location is not (null or Mine or MineShaft or VolcanoDungeon or BeachNightMarket or MermaidHouse or AbandonedJojaMart)
-				&& !location.isTemp();
+				&& !location.IsTemporary;
 		}
 
 		public static bool IsTileAllowed(GameLocation location, Vector2 tile)
 		{
-			return location.isTileLocationTotallyClearAndPlaceableIgnoreFloors(tile)
-				&& !location.Objects.ContainsKey(tile)
+			return location.IsTileBlockedBy(tile)
 				&& location.isCharacterAtTile(tile) is null
 				&& location.isTileOccupiedByFarmer(tile) is null;
 		}
 
 		public static bool IsNpcAllowed(Farmer player, NPC npc, Item gift)
 		{
-			return npc.canReceiveThisItemAsGift(i: gift)
+			player.TemporaryItem = gift;
+			bool facts = npc.tryToReceiveActiveObject(who: player, probe: true)
 				&& player.friendshipData.TryGetValue(npc.Name, out Friendship data)
-				&& data.GiftsThisWeek < 2
+				&& data.GiftsThisWeek < NPC.maxGiftsPerWeek
 				&& data.GiftsToday == 0;
+			player.TemporaryItem = null;
+			return facts;
 		}
 
 		public static bool IsNpcGiftAllowed(Item item)
@@ -608,19 +610,17 @@ namespace GiftWrapper
 		public static Shop IsShopAllowed(ShopMenu menu, GameLocation location)
 		{
 			return ModEntry.Shops?.FirstOrDefault((Shop shop)
-				=> (shop.Context is null
-					|| shop.Context == menu.storeContext
-					|| shop.Context == menu.portraitPerson?.Name)
-				&& ModEntry.DoesShopPreconditionMatch(shop: shop, location: location)
-				&& shop.IfAlwaysAvailable == ModEntry.IsAlwaysAvailable);
+				=> (shop.ShopId is null || shop.ShopId == menu.ShopId)
+					&& ModEntry.DoesShopPreconditionMatch(shop: shop, location: location)
+					&& shop.IfAlwaysAvailable == ModEntry.IsAlwaysAvailable);
 		}
 
 		public static bool DoesShopPreconditionMatch(Shop shop, GameLocation location)
 		{
-			int id = ModEntry.Definitions.EventConditionId;
+			string id = ModEntry.Definitions.EventConditionId;
 			return shop.Conditions is null
-					|| shop.Conditions.Length == 0
-					|| shop.Conditions.Any((string s) => location.checkEventPrecondition($"{id}/{s}") == id);
+				|| shop.Conditions.Length == 0
+				|| shop.Conditions.Any((string s) => id == location.checkEventPrecondition(precondition: $"{id}/{s}", check_seen: false));
 		}
 	}
 }

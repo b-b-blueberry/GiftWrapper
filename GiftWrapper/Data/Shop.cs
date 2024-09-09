@@ -7,7 +7,7 @@
 		/// to match either <see cref="StardewValley.Menus.ShopMenu.storeContext"/>
 		/// or <see cref="StardewValley.Menus.ShopMenu.portraitPerson"/>.
 		/// </summary>
-		public string Context = null;
+		public string ShopId = null;
 		/// <summary>
 		/// List of conditions to validate this entry.
 		/// Valid if null, or if any condition passes.

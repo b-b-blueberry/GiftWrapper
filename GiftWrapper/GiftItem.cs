@@ -29,7 +29,7 @@ namespace GiftWrapper
 			&& Context.IsMultiplayer
 			&& Context.CanPlayerMove
 			&& Vector2.Equals(this.TileLocation, Vector2.Floor(Game1.GetPlacementGrabTile()))
-			&& Vector2.Distance(this.TileLocation, Game1.player.getTileLocation()) < ModEntry.Config.GiftPreviewTileRange;
+			&& Vector2.Distance(this.TileLocation, Game1.player.Tile) < ModEntry.Config.GiftPreviewTileRange;
 
 		protected Style _style;
 		protected float _tooltipAlpha;
@@ -37,7 +37,6 @@ namespace GiftWrapper
 		public override string DisplayName
 		{
 			get => ModEntry.I18n.Get("item.wrappedgift.name");
-			set {}
 		}
 
 		public override int Stack {
@@ -64,27 +63,22 @@ namespace GiftWrapper
 
 			this.Style.fieldChangeEvent += this.OnStyleChanged;
 
-			this.NetFields.AddFields(
-				this.Owner,
-				this.Style,
-				this.ItemInGift,
-				this.HitCount);
+			this.NetFields
+				.AddField(this.Owner)
+				.AddField(this.Style)
+				.AddField(this.ItemInGift)
+				.AddField(this.HitCount);
 		}
 
-		public GiftItem(long owner, string style, Item item) : this()
+		public GiftItem SetGiftValues(long owner, string style, Item item)
 		{
-			// Gift values
 			this.Owner.Set(owner);
 			this.Style.Set(style);
 			this.ItemInGift.Set(item);
 			this.HitCount.Set(Game1.random.Next(ModEntry.Definitions.HitCount.First(), ModEntry.Definitions.HitCount.Last() + 1));
+			
+			return this;
 		}
-
-		public GiftItem(Vector2 tileLocation, int parentSheetIndex, string Givenname, bool canBeSetDown, bool canBeGrabbed, bool isHoedirt, bool isSpawnedObject) : this() {}
-
-		public GiftItem(int parentSheetIndex, int initialStack, bool isRecipe = false, int price = -1, int quality = 0) : this() {}
-
-		public GiftItem(Vector2 tileLocation, int parentSheetIndex, int initialStack) : this() {}
 
 		private void OnStyleChanged(NetString field, string oldValue, string newValue)
 		{
@@ -109,9 +103,19 @@ namespace GiftWrapper
 				width: this.getDescriptionWidth());
 		}
 
-		public override Item getOne()
+		protected override Item GetOneNew()
 		{
-			return new GiftItem(owner: this.Owner.Value, style: this.Style.Value, item: this.ItemInGift.Value);
+			return new GiftItem();
+		}
+
+		protected override void GetOneCopyFrom(Item source)
+		{
+			base.GetOneCopyFrom(source);
+
+			if (source is GiftItem gift)
+			{
+				this.SetGiftValues(owner: gift.Owner.Value, style: gift.Style.Value, item: gift.ItemInGift.Value);
+			}
 		}
 
 		public override int addToStack(Item stack)
@@ -144,11 +148,6 @@ namespace GiftWrapper
 			return true;
 		}
 
-		public override bool canBePlacedInWater()
-		{
-			return false;
-		}
-
 		public override bool canBeTrashed()
 		{
 			return true;
@@ -159,9 +158,9 @@ namespace GiftWrapper
 			return false;
 		}
 
-		public override bool canBePlacedHere(GameLocation l, Vector2 tile)
+		public override bool canBePlacedHere(GameLocation l, Vector2 tile, CollisionMask collisionMask = CollisionMask.All, bool showError = false)
 		{
-			return base.canBePlacedHere(l: l, tile: tile)
+			return base.canBePlacedHere(l: l, tile: tile, collisionMask: collisionMask, showError: showError)
 				&& ModEntry.IsLocationAllowed(location: l)
 				&& ModEntry.IsTileAllowed(location: l, tile: tile);
 		}
@@ -181,9 +180,9 @@ namespace GiftWrapper
 			return false;
 		}
 
-		public override void updateWhenCurrentLocation(GameTime time, GameLocation environment)
+		public override void updateWhenCurrentLocation(GameTime time)
 		{
-			base.updateWhenCurrentLocation(time, environment);
+			base.updateWhenCurrentLocation(time);
 
 			// Allow left-click interactions (pickup gift)
 			this.health = 0;
@@ -209,7 +208,7 @@ namespace GiftWrapper
 			if (this.IsItemInside)
 			{
 				Rectangle source = this._style.Area;
-				Rectangle target = this.getBoundingBox(this.TileLocation);
+				Rectangle target = this.boundingBox.Value;
 				int count = Game1.random.Next(4, 8);
 
 				// Chunks (paper)
@@ -227,9 +226,9 @@ namespace GiftWrapper
 					groundLevelTile: (int)this.TileLocation.Y,
 					color: Colour.White,
 					scale: Game1.pixelZoom);
-				who.currentLocation.playSoundAt(
+				who.currentLocation.playSound(
 					audioName: this._style.HitSound ?? ModEntry.Definitions.HitSound,
-					position: who.getTileLocation());
+					position: who.Tile);
 
 				this.HitCount.Set(this.HitCount.Value - 1);
 				if (this.HitCount.Value < 1)
@@ -242,9 +241,9 @@ namespace GiftWrapper
 						yTile: (int)this.TileLocation.Y,
 						numberOfChunks: Game1.random.Next(4, 8),
 						resource: false);
-					who.currentLocation.playSoundAt(
+					who.currentLocation.playSound(
 						audioName: this._style.LastHitSound ?? ModEntry.Definitions.LastHitSound,
-						position: who.getTileLocation());
+						position: who.Tile);
 
 					// Sparkles
 					var sprite = new TemporaryAnimatedSprite(
@@ -275,13 +274,13 @@ namespace GiftWrapper
 			return true;
 		}
 
-		public override bool performToolAction(Tool t, GameLocation location)
+		public override bool performToolAction(Tool t)
 		{
-			if (this.isTemporarilyInvisible || t is null || location is null)
+			if (this.isTemporarilyInvisible || t is null)
 				return false;
 
 			// Left-click interactions (pickup gift)
-			location.debris.Add(new Debris(
+			this.Location?.debris.Add(new Debris(
 				item: this.getOne(),
 				debrisOrigin: this.TileLocation * Game1.tileSize,
 				targetLocation: Game1.player.GetBoundingBox().Center.ToVector2()));
@@ -296,9 +295,9 @@ namespace GiftWrapper
 			return base.performUseAction(location);
 		}
 
-		public override void performRemoveAction(Vector2 tileLocation, GameLocation environment)
+		public override void performRemoveAction()
 		{
-			base.performRemoveAction(tileLocation, environment);
+			base.performRemoveAction();
 		}
 
 		public override Point getExtraSpaceNeededForTooltipSpecialIcons(SpriteFont font, int minWidth, int horizontalBuffer, int startingHeight, StringBuilder descriptionText, string boldTitleText, int moneyAmountToDisplayAtBottom)
@@ -418,7 +417,7 @@ namespace GiftWrapper
 			position = new Vector2(
 					x: x * Game1.tileSize,
 					y: ((y - 1.5f) * Game1.tileSize) + yOffset)
-				- Game1.viewport.ToXna().Location.ToVector2();
+				- new Vector2(x: Game1.viewport.X, y: Game1.viewport.Y);
 
 			// Bubble
 			spriteBatch.Draw(
@@ -458,19 +457,19 @@ namespace GiftWrapper
 				b: spriteBatch,
 				globalX: Game1.viewport.X + (int)objectPosition.X,
 				globalY: Game1.viewport.Y + (int)objectPosition.Y,
-				layerDepth: Math.Max(0, (f.getStandingY() + 3) / 10000f));
+				layerDepth: Math.Max(0, (f.StandingPixel.Y + 3) / 10000f));
 		}
 
 		public override void drawAsProp(SpriteBatch b)
 		{
 			Vector2 position = this.TileLocation * Game1.tileSize
-				+ new Vector2(Game1.tileSize / 2)
-				- Game1.viewport.ToXna().Location.ToVector2();
+				+ new Vector2(0.5f) * Game1.tileSize
+				- new Vector2(x: Game1.viewport.X, y: Game1.viewport.Y);
 			this.DrawGiftItem(
 				b: b,
 				globalX: (int)position.X,
 				globalY: (int)position.Y,
-				layerDepth: this.getBoundingBox(this.TileLocation).Bottom / 10000f);
+				layerDepth: this.boundingBox.Value.Bottom / 10000f);
 		}
 
 		public void DrawGiftItem(SpriteBatch b, int globalX, int globalY, float alpha = 1, float layerDepth = 1, bool drawShadow = true, bool isInWorld = false)
@@ -493,7 +492,7 @@ namespace GiftWrapper
 				position = new Vector2(Game1.tileSize / 2)
 					+ new Vector2(x: globalX, y: globalY)
 					+ new Vector2(x: 0, y: 16 + 3 + 4)
-					- Game1.viewport.ToXna().Location.ToVector2();
+					- new Vector2(x: Game1.viewport.X, y: Game1.viewport.Y);
 				b.Draw(
 					texture: Game1.shadowTexture,
 					position: position,
@@ -517,7 +516,7 @@ namespace GiftWrapper
 						x: Game1.random.Next(-2, 2),
 						y: Game1.random.Next(-2, 2))
 					: Vector2.Zero)
-				- Game1.viewport.ToXna().Location.ToVector2();
+				- new Vector2(x: Game1.viewport.X, y: Game1.viewport.Y);
 			b.Draw(
 				texture: ModEntry.GetStyleTexture(this._style),
 				position: position,

@@ -401,7 +401,7 @@ namespace GiftWrapper
 			};
 
 			// Position components
-			this.gameWindowSizeChanged(oldBounds: Rectangle.Empty, newBounds: Game1.uiViewport.ToXna());
+			this.gameWindowSizeChanged(oldBounds: Rectangle.Empty, newBounds: Game1.graphics.GraphicsDevice.Viewport.Bounds);
 
 			// Clickable navigation
 			this._defaultClickable = this.ItemSlot.myID;
@@ -428,16 +428,16 @@ namespace GiftWrapper
 		private bool TryCreateAndRemoveItemsFromInventory()
 		{
 			// Require item and wrap in inventory on wrap
-			int index = Game1.player.Items.IndexOf(Game1.player.Items.FirstOrDefault((Item item) => item is WrapItem));
+			Item wrap = Game1.player.Items.FirstOrDefault((Item item) => item is WrapItem);
 			Item item = this.ItemAt(this.ItemIndex.Value);
-			bool isCraftable = item is not null && index >= 0;
+			bool isCraftable = item is not null && wrap is not null;
 
 			if (isCraftable)
 			{
 				// Create gift from item and wrap
 				Item gift = this.ItemToWrap.getOne();
 				gift.Stack = this.ItemQuantity;
-				this.GiftItem = new(
+				this.GiftItem = new GiftItem().SetGiftValues(
 					owner: Game1.player.UniqueMultiplayerID,
 					style: this.Styles[this.StyleIndex].ID,
 					item: gift);
@@ -447,9 +447,9 @@ namespace GiftWrapper
 				{
 					Game1.player.removeItemFromInventory(which: item);
 				}
-				if (--Game1.player.Items[index].Stack <= 0)
+				if (--wrap.Stack <= 0)
 				{
-					Game1.player.removeItemFromInventory(whichItemIndex: index);
+					Game1.player.removeItemFromInventory(which: wrap);
 				}
 			}
 
@@ -478,7 +478,7 @@ namespace GiftWrapper
 			// Give gift to player or throw on ground
 			if (!Game1.player.addItemToInventoryBool(item: this.GiftItem))
 			{
-				Game1.createItemDebris(item: this.GiftItem, origin: Game1.player.Position, direction: -1);
+				Game1.createItemDebris(item: this.GiftItem, pixelOrigin: Game1.player.Position, direction: -1);
 			}
 
 			this.GiftItem = null;
@@ -1069,7 +1069,7 @@ namespace GiftWrapper
 
 		public override void draw(SpriteBatch b)
 		{
-			Rectangle screen = Game1.uiViewport.ToXna();
+			Rectangle screen = Game1.graphics.GraphicsDevice.Viewport.Bounds;
 			screen.Offset(
 				offsetX: -screen.X,
 				offsetY: -screen.Y);
@@ -1186,7 +1186,7 @@ namespace GiftWrapper
 						layerDepth: 1);
 
 					// Item in slot
-					Item item = this.GiftItem?.ItemInGift ?? this.ItemToWrap;
+					Item item = this.GiftItem?.ItemInGift.Value ?? this.ItemToWrap;
 					Vector2 position = this.ItemSlot.bounds.Location.ToVector2()
 							+ new Vector2(x: 0, y: this._crafting.Offset)
 							+ (this.ItemSlot.bounds.Size.ToVector2() - new Vector2(Game1.tileSize)) / 2;
