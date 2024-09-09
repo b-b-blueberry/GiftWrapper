@@ -15,7 +15,7 @@
 	"error.location": "Can't place that here!",
 	"error.item.missing": "You don't have any {{WrapItemName}}!",
 
-	"menu.infopanel.body": "Pick an item to hide it in a {{GiftItemName}}!\n\nGift it to a friend or use it as home decor!\nOnly normal items can be gifted to villagers, only in stacks of 1.\n\nUnwrap a placed gift by interacting with it!",
+	"menu.infopanel.body": "Pick an item to hide it in a Wrapped Gift!\n\nGift it to a friend or use it as home decor!\nVillagers only accept the usual items.\n\nUnwrap a placed gift by interacting with it!",
 
 	"config.section.description": "How it works",
 	"config.section.shops": "Where to buy",
@@ -23,7 +23,7 @@
 	"config.section.multiplayer": "Multiplayer",
 
 	"config.description.usage": "Use {{WrapItemName}} to open the Gift Wrap Menu! Choose an item to wrap-up and pick your gift style. Wrap it up to turn it into a {{GiftItemName}} with the item inside!",
-	"config.description.singleplayer": "\n\n$ In singleplayer:\n\nYou can place it in your home as decoration, or give it to someone in town for an added{{OptionalFriendship}} friendship boost!\nOnly a {{GiftItemName}} with one normal item inside can be given to someone in town.",
+	"config.description.singleplayer": "\n\n$ In singleplayer:\n\nYou can place it in your home as decoration, or give it to someone in town for an added{{OptionalFriendship}} friendship boost!\nOnly a {{GiftItemName}} with a regular giftable item inside can be given to someone in town.",
 	"config.description.multiplayer": "\n\n$ In multiplayer:\n\nBuy some {{WrapItemName}} and use it to give secret gifts to your friends! Your friends can't see what's inside the gifts you wrap, but they can tear them open to find out! It might give you a little friendship boost, too <",
 	"config.description.shopping": "{{WrapItemName}} can be bought from shops over the gifting season! Check your local shops around the Winter Star festival.",
 	"config.description.shopping.owners": "\n\nYou can buy {{WrapItemName}} from these shops today:\n$ {{Owners}}",
