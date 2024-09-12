@@ -20,12 +20,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="assets\*.png" />
-		<Folder Include="assets\*.json" />
-		<Folder Include="assets\Audio\*.wav" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<Reference Include="SpaceCore">
 			<HintPath>$(GamePath)\Mods\SpaceCore\SpaceCore.dll</HintPath>
 			<Private>false</Private>
