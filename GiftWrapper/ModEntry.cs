@@ -592,7 +592,7 @@ namespace GiftWrapper
 
 		public static bool IsTileAllowed(GameLocation location, Vector2 tile)
 		{
-			return location.IsTileBlockedBy(tile)
+			return !location.IsTileBlockedBy(tile)
 				&& location.isCharacterAtTile(tile) is null
 				&& location.isTileOccupiedByFarmer(tile) is null;
 		}
