@@ -1,11 +1,11 @@
 ﻿{
     "Name": "Gift Wrapper",
     "Author": "blueberry",
-    "Version": "2.1.0",
+    "Version": "2.1.1",
     "Description": "Give the gift of gifts!",
     "UniqueID": "blueberry.GiftWrapper",
     "EntryDll": "GiftWrapper.dll",
-    "MinimumApiVersion": "4.0.0-alpha.0",
+    "MinimumApiVersion": "4.0.0",
     "UpdateKeys": [ "Nexus:4721" ],
     "Dependencies": [
         {
