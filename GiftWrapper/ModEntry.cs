@@ -142,7 +142,7 @@ namespace GiftWrapper
 			return true;
 		}
 
-		private static string Tokenised(string key, string[] contexts = null, string[] owners = null)
+		private static string Tokenised(string key, string[] shops = null)
 		{
 			string friendship = ModEntry.Definitions is null
 				? string.Empty
@@ -153,17 +153,9 @@ namespace GiftWrapper
 				WrapItemName = wrap,
 				GiftItemName = gift,
 				OptionalFriendship = friendship,
-				Owners = owners is null
+				Shops = shops is null
 					? string.Empty
-					: string.Join(", ", owners),
-				NumOwners = owners is null
-					? 0
-					: owners.Length,
-				NumOthers = contexts is null
-					? 0
-					: owners is null
-						? contexts.Length
-						: contexts.Length - owners.Length
+					: string.Join("\n", shops)
 			});
 			return str;
 		}
@@ -204,24 +196,25 @@ namespace GiftWrapper
 					string str = ModEntry.Tokenised("config.description.shopping");
 					if (ModEntry.Shops is Shop[] shops && Game1.currentLocation is GameLocation location)
 					{
-						var contexts = shops
-							.Where((Shop shop) => ModEntry.DoesShopPreconditionMatch(shop: shop, location: location) && shop.IfAlwaysAvailable == ModEntry.IsAlwaysAvailable)
-							.Select((Shop shop) => shop.ShopId)
+						var validShops = shops
+							.Where((Shop shop) => ModEntry.DoesShopPreconditionMatch(shop, location) && ModEntry.DoesShopAvailabilityMatch(shop));
+                        var shopIds = validShops
+                            .SelectMany((Shop shop) => shop.ShopIds ?? [])
 							.ToArray();
-						var owners = contexts
-							.Where((string context) => Game1.getCharacterFromName(context) is not null)
-							.ToArray();
-						if (owners.Any())
-						{
-							str += ModEntry.Tokenised("config.description.shopping.owners", owners: owners, contexts: contexts);
-							if (contexts.Length - owners.Length is int diff && diff > 0)
-							{
-								str += ModEntry.Tokenised("config.description.shopping.others", owners: owners, contexts: contexts);
-							}
-						}
-						else
-						{
-							str += ModEntry.Tokenised("config.description.shopping.none");
+                        if (!validShops.Any())
+                        {
+							// No valid shops
+                            str += ModEntry.Tokenised("config.description.shopping.none");
+                        }
+                        else if (!shopIds.Any())
+                        {
+							// All shops are valid (no shop IDs = no specific shops = all shops)
+                            str += ModEntry.Tokenised("config.description.shopping.all");
+                        }
+                        else
+                        {
+							// Some shops are valid
+							str += ModEntry.Tokenised("config.description.shopping.shops", shops: shopIds);
 						}
 					}
 
@@ -616,17 +609,26 @@ namespace GiftWrapper
 		public static Shop IsShopAllowed(ShopMenu menu, GameLocation location)
 		{
 			return ModEntry.Shops?.FirstOrDefault((Shop shop)
-				=> (shop.ShopId is null || shop.ShopId == menu.ShopId)
-					&& ModEntry.DoesShopPreconditionMatch(shop: shop, location: location)
-					&& shop.IfAlwaysAvailable == ModEntry.IsAlwaysAvailable);
-		}
+				=> ModEntry.DoesShopIdMatch(shop, menu)
+					&& ModEntry.DoesShopPreconditionMatch(shop, location)
+					&& ModEntry.DoesShopAvailabilityMatch(shop));
+        }
 
-		public static bool DoesShopPreconditionMatch(Shop shop, GameLocation location)
+        public static bool DoesShopIdMatch(Shop shop, ShopMenu menu)
+        {
+            return shop.ShopIds is null
+                || shop.ShopIds.Length == 0
+                || shop.ShopIds.Any((string s) => s == menu.ShopId);
+        }
+
+        public static bool DoesShopAvailabilityMatch(Shop shop)
+        {
+            return shop.IfAlwaysAvailable is null || shop.IfAlwaysAvailable == ModEntry.IsAlwaysAvailable;
+        }
+
+        public static bool DoesShopPreconditionMatch(Shop shop, GameLocation location)
 		{
-			string id = ModEntry.Definitions.EventConditionId;
-			return shop.Conditions is null
-				|| shop.Conditions.Length == 0
-				|| shop.Conditions.Any((string s) => id == location.checkEventPrecondition(precondition: $"{id}/{s}", check_seen: false));
+			return shop.Conditions is null || GameStateQuery.CheckConditions(shop.Conditions, location, Game1.player);
 		}
 	}
 }

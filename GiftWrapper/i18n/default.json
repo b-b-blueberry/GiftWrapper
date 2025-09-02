@@ -26,8 +26,8 @@
 	"config.description.singleplayer": "\n\n$ In singleplayer:\n\nYou can place it in your home as decoration, or give it to someone in town for an added{{OptionalFriendship}} friendship boost!\nOnly a {{GiftItemName}} with a regular giftable item inside can be given to someone in town.",
 	"config.description.multiplayer": "\n\n$ In multiplayer:\n\nBuy some {{WrapItemName}} and use it to give secret gifts to your friends! Your friends can't see what's inside the gifts you wrap, but they can tear them open to find out! It might give you a little friendship boost, too <",
 	"config.description.shopping": "{{WrapItemName}} can be bought from shops over the gifting season! Check your local shops around the Winter Star festival.",
-	"config.description.shopping.owners": "\n\nYou can buy {{WrapItemName}} from these shops today:\n$ {{Owners}}",
-	"config.description.shopping.others": "\nand {{NumOthers}} others around town!",
+	"config.description.shopping.shops": "\n\n$ You can buy {{WrapItemName}} from these shops today:\n\n{{Shops}}",
+	"config.description.shopping.all": "\n\n$ All shops are selling {{WrapItemName}} today!",
 	"config.description.shopping.none": "\n\n$ Nobody is selling {{WrapItemName}} today.",
 
 	"config.availableallyear.name": "Available All Year",

@@ -3,18 +3,14 @@
 	public record Shop
 	{
 		/// <summary>
-		/// Name of shop context or portrait NPC, prioritised respectively,
-		/// to match either <see cref="StardewValley.Menus.ShopMenu.storeContext"/>
-		/// or <see cref="StardewValley.Menus.ShopMenu.portraitPerson"/>.
+		/// Name of shop IDs to match any <see cref="StardewValley.Menus.ShopMenu.ShopId"/>.
 		/// </summary>
-		public string ShopId = null;
+		public string[] ShopIds = null;
 		/// <summary>
-		/// List of conditions to validate this entry.
-		/// Valid if null, or if any condition passes.
-		/// Any condition passes if all fields pass.
-		/// Parsed by <see cref="StardewValley.GameLocation.checkEventPrecondition(string)"/>.
+		/// <see cref="StardewValley.GameStateQuery"/> conditions to validate this entry.
+		/// Valid if null, or if condition passes.
 		/// </summary>
-		public string[] Conditions = null;
+		public string Conditions = null;
 		/// <summary>
 		/// List of names of items used to index items added by this shop entry.
 		/// Prioritised in descending order.
@@ -26,9 +22,8 @@
 		/// </summary>
 		public float PriceMultiplier = 1;
 		/// <summary>
-		/// Entry is only valid if this field equals value of <see cref="Config.AlwaysAvailable"/>,
-		/// for either boolean value.
+		/// Valid if null, or field equals value of <see cref="Config.AlwaysAvailable"/>.
 		/// </summary>
-		public bool IfAlwaysAvailable = false;
+		public bool? IfAlwaysAvailable = null;
 	}
 }

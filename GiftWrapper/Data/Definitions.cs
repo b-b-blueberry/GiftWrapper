@@ -16,7 +16,6 @@ namespace GiftWrapper.Data
 		public string RemoveSound;
 		public string InvalidGiftStringPath;
 		public string InvalidGiftSound;
-		public string EventConditionId;
 		public int CategoryNumber;
 		public Colour CategoryTextColour;
 		public Colour SecretTextColour;

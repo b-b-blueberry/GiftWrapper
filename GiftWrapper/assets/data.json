@@ -33,7 +33,6 @@
         "RemoveSound": "hammer",
         "InvalidGiftStringPath": "Strings\\StringsFromCSFiles:Event.cs.1803",
         "InvalidGiftSound": "cancel",
-        "EventConditionId": "Mods.blueberry.GiftWrapper.Event",
         "CategoryNumber": -4721,
         "CategoryTextColour": {
             "R": 120,
@@ -60,32 +59,39 @@
         {
             // Wrapping is sold by Pierre during the Secret Friend period,
             // appearing at the top of the shop menu
-            "ShopId": "Pierre",
+            "ShopIds": [
+                "SeedShop"
+            ],
             "AddAtItem": [],
-            "Conditions": [
-                "z spring/z summer/z fall/u 18 19 20 21 22 23 24"
-            ]
+            "Conditions": "SEASON Winter, DAY_OF_MONTH 18 19 20 21 22 23 24"
         },
         {
             // If any shops happen to be open during the festival,
             // they get a reduced stock with a higher price
-            "Conditions": [
-                "z spring/z summer/z fall/u 25"
-            ],
+            "Conditions": "SEASON Winter, DAY_OF_MONTH 25",
             "PriceMultiplier": 2
         },
         {
             // Wrapping is sold at clearance price after the festival until the end of the year
             // For an 80g base price, clearance price is 80 * 0.4 = 30g
-            "ShopId": "Pierre",
-            "Conditions": [
-                "z spring/z summer/z fall/u 26 27 28"
+            "ShopIds": [
+                "SeedShop"
             ],
+            "Conditions": "SEASON Winter, DAY_OF_MONTH 26 27 28",
             "PriceMultiplier": 0.4
         },
         {
             // Wrapping is sold by Pierre regardless of any conditions if enabled in config
-            "ShopId": "Pierre",
+            "ShopIds": [
+                "SeedShop",
+                "Festival_FlowerDance_Pierre",
+                "Festival_EggFestival_Pierre",
+                "Festival_Luau_Pierre",
+                "Festival_SpiritsEve_Pierre",
+                "Festival_DanceOfTheMoonlightJellies_Pierre",
+                "Festival_FeastOfTheWinterStar_Pierre",
+                "DesertFestival_Pierre"
+            ],
             "AddAtItem": [
                 "Catalogue"
             ],
